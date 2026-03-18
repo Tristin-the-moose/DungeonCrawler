@@ -1,0 +1,76 @@
+C:\Users\Tristin.Colenso\OneDrive - Quanta Services Management Partnership, L.P\Desktop\Testing\Game Design\DungeonCrawler\obj\Debug\net9.0\mgcb.tool.restore
+C:\Users\Tristin.Colenso\OneDrive - Quanta Services Management Partnership, L.P\Desktop\Testing\Game Design\DungeonCrawler\obj\Debug\net9.0\DungeonCrawler.csproj.AssemblyReference.cache
+C:\Users\Tristin.Colenso\OneDrive - Quanta Services Management Partnership, L.P\Desktop\Testing\Game Design\DungeonCrawler\obj\Debug\net9.0\DungeonCrawler.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Tristin.Colenso\OneDrive - Quanta Services Management Partnership, L.P\Desktop\Testing\Game Design\DungeonCrawler\obj\Debug\net9.0\DungeonCrawler.AssemblyInfoInputs.cache
+C:\Users\Tristin.Colenso\OneDrive - Quanta Services Management Partnership, L.P\Desktop\Testing\Game Design\DungeonCrawler\obj\Debug\net9.0\DungeonCrawler.AssemblyInfo.cs
+C:\Users\Tristin.Colenso\OneDrive - Quanta Services Management Partnership, L.P\Desktop\Testing\Game Design\DungeonCrawler\obj\Debug\net9.0\DungeonCrawler.csproj.CoreCompileInputs.cache
+C:\Users\Tristin.Colenso\OneDrive - Quanta Services Management Partnership, L.P\Desktop\Testing\Game Design\DungeonCrawler\bin\Debug\net9.0\DungeonCrawler.exe
+C:\Users\Tristin.Colenso\OneDrive - Quanta Services Management Partnership, L.P\Desktop\Testing\Game Design\DungeonCrawler\bin\Debug\net9.0\DungeonCrawler.deps.json
+C:\Users\Tristin.Colenso\OneDrive - Quanta Services Management Partnership, L.P\Desktop\Testing\Game Design\DungeonCrawler\bin\Debug\net9.0\DungeonCrawler.runtimeconfig.json
+C:\Users\Tristin.Colenso\OneDrive - Quanta Services Management Partnership, L.P\Desktop\Testing\Game Design\DungeonCrawler\bin\Debug\net9.0\DungeonCrawler.dll
+C:\Users\Tristin.Colenso\OneDrive - Quanta Services Management Partnership, L.P\Desktop\Testing\Game Design\DungeonCrawler\bin\Debug\net9.0\DungeonCrawler.pdb
+C:\Users\Tristin.Colenso\OneDrive - Quanta Services Management Partnership, L.P\Desktop\Testing\Game Design\DungeonCrawler\bin\Debug\net9.0\MonoGame.Framework.dll
+C:\Users\Tristin.Colenso\OneDrive - Quanta Services Management Partnership, L.P\Desktop\Testing\Game Design\DungeonCrawler\bin\Debug\net9.0\NVorbis.dll
+C:\Users\Tristin.Colenso\OneDrive - Quanta Services Management Partnership, L.P\Desktop\Testing\Game Design\DungeonCrawler\bin\Debug\net9.0\runtimes\android-arm\native\libopenal.so
+C:\Users\Tristin.Colenso\OneDrive - Quanta Services Management Partnership, L.P\Desktop\Testing\Game Design\DungeonCrawler\bin\Debug\net9.0\runtimes\android-arm64\native\libopenal.so
+C:\Users\Tristin.Colenso\OneDrive - Quanta Services Management Partnership, L.P\Desktop\Testing\Game Design\DungeonCrawler\bin\Debug\net9.0\runtimes\android-x64\native\libopenal.so
+C:\Users\Tristin.Colenso\OneDrive - Quanta Services Management Partnership, L.P\Desktop\Testing\Game Design\DungeonCrawler\bin\Debug\net9.0\runtimes\android-x86\native\libopenal.so
+C:\Users\Tristin.Colenso\OneDrive - Quanta Services Management Partnership, L.P\Desktop\Testing\Game Design\DungeonCrawler\bin\Debug\net9.0\runtimes\ios-arm64\native\libopenal.a
+C:\Users\Tristin.Colenso\OneDrive - Quanta Services Management Partnership, L.P\Desktop\Testing\Game Design\DungeonCrawler\bin\Debug\net9.0\runtimes\iossimulator-arm64\native\libopenal.a
+C:\Users\Tristin.Colenso\OneDrive - Quanta Services Management Partnership, L.P\Desktop\Testing\Game Design\DungeonCrawler\bin\Debug\net9.0\runtimes\iossimulator-x64\native\libopenal.a
+C:\Users\Tristin.Colenso\OneDrive - Quanta Services Management Partnership, L.P\Desktop\Testing\Game Design\DungeonCrawler\bin\Debug\net9.0\runtimes\linux-arm64\native\libopenal.so
+C:\Users\Tristin.Colenso\OneDrive - Quanta Services Management Partnership, L.P\Desktop\Testing\Game Design\DungeonCrawler\bin\Debug\net9.0\runtimes\linux-x64\native\libopenal.so
+C:\Users\Tristin.Colenso\OneDrive - Quanta Services Management Partnership, L.P\Desktop\Testing\Game Design\DungeonCrawler\bin\Debug\net9.0\runtimes\osx\native\libopenal.dylib
+C:\Users\Tristin.Colenso\OneDrive - Quanta Services Management Partnership, L.P\Desktop\Testing\Game Design\DungeonCrawler\bin\Debug\net9.0\runtimes\win-x64\native\openal.dll
+C:\Users\Tristin.Colenso\OneDrive - Quanta Services Management Partnership, L.P\Desktop\Testing\Game Design\DungeonCrawler\bin\Debug\net9.0\runtimes\linux-x64\native\libSDL2-2.0.so.0
+C:\Users\Tristin.Colenso\OneDrive - Quanta Services Management Partnership, L.P\Desktop\Testing\Game Design\DungeonCrawler\bin\Debug\net9.0\runtimes\osx\native\libSDL2-2.0.0.dylib
+C:\Users\Tristin.Colenso\OneDrive - Quanta Services Management Partnership, L.P\Desktop\Testing\Game Design\DungeonCrawler\bin\Debug\net9.0\runtimes\win-x64\native\SDL2.dll
+C:\Users\Tristin.Colenso\OneDrive - Quanta Services Management Partnership, L.P\Desktop\Testing\Game Design\DungeonCrawler\obj\Debug\net9.0\DungeonC.EA0EDB72.Up2Date
+C:\Users\Tristin.Colenso\OneDrive - Quanta Services Management Partnership, L.P\Desktop\Testing\Game Design\DungeonCrawler\obj\Debug\net9.0\DungeonCrawler.dll
+C:\Users\Tristin.Colenso\OneDrive - Quanta Services Management Partnership, L.P\Desktop\Testing\Game Design\DungeonCrawler\obj\Debug\net9.0\refint\DungeonCrawler.dll
+C:\Users\Tristin.Colenso\OneDrive - Quanta Services Management Partnership, L.P\Desktop\Testing\Game Design\DungeonCrawler\obj\Debug\net9.0\DungeonCrawler.pdb
+C:\Users\Tristin.Colenso\OneDrive - Quanta Services Management Partnership, L.P\Desktop\Testing\Game Design\DungeonCrawler\obj\Debug\net9.0\DungeonCrawler.genruntimeconfig.cache
+C:\Users\Tristin.Colenso\OneDrive - Quanta Services Management Partnership, L.P\Desktop\Testing\Game Design\DungeonCrawler\obj\Debug\net9.0\ref\DungeonCrawler.dll
+C:\Users\Tristin.Colenso\OneDrive - Quanta Services Management Partnership, L.P\Desktop\Testing\GameDesign\DungeonCrawler\obj\Debug\net9.0\mgcb.tool.restore
+C:\Users\Tristin.Colenso\OneDrive - Quanta Services Management Partnership, L.P\Desktop\Testing\GameDesign\DungeonCrawler\obj\Debug\net9.0\DungeonCrawler.dll
+C:\Users\Tristin.Colenso\OneDrive - Quanta Services Management Partnership, L.P\Desktop\Testing\GameDesign\DungeonCrawler\obj\Debug\net9.0\refint\DungeonCrawler.dll
+C:\Users\Tristin.Colenso\OneDrive - Quanta Services Management Partnership, L.P\Desktop\Testing\GameDesign\DungeonCrawler\obj\Debug\net9.0\DungeonCrawler.pdb
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\obj\Debug\net9.0\mgcb.tool.restore
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\obj\Debug\net9.0\DungeonCrawler.dll
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\obj\Debug\net9.0\refint\DungeonCrawler.dll
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\obj\Debug\net9.0\DungeonCrawler.pdb
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\bin\Debug\net9.0\DungeonCrawler.exe
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\bin\Debug\net9.0\DungeonCrawler.deps.json
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\bin\Debug\net9.0\DungeonCrawler.runtimeconfig.json
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\bin\Debug\net9.0\DungeonCrawler.dll
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\bin\Debug\net9.0\DungeonCrawler.pdb
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\bin\Debug\net9.0\MonoGame.Framework.dll
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\bin\Debug\net9.0\NVorbis.dll
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\bin\Debug\net9.0\runtimes\android-arm\native\libopenal.so
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\bin\Debug\net9.0\runtimes\android-arm64\native\libopenal.so
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\bin\Debug\net9.0\runtimes\android-x64\native\libopenal.so
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\bin\Debug\net9.0\runtimes\android-x86\native\libopenal.so
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\bin\Debug\net9.0\runtimes\ios-arm64\native\libopenal.a
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\bin\Debug\net9.0\runtimes\iossimulator-arm64\native\libopenal.a
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\bin\Debug\net9.0\runtimes\iossimulator-x64\native\libopenal.a
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\bin\Debug\net9.0\runtimes\linux-arm64\native\libopenal.so
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\bin\Debug\net9.0\runtimes\linux-x64\native\libopenal.so
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\bin\Debug\net9.0\runtimes\osx\native\libopenal.dylib
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\bin\Debug\net9.0\runtimes\win-x64\native\openal.dll
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\bin\Debug\net9.0\runtimes\linux-x64\native\libSDL2-2.0.so.0
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\bin\Debug\net9.0\runtimes\osx\native\libSDL2-2.0.0.dylib
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\bin\Debug\net9.0\runtimes\win-x64\native\SDL2.dll
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\obj\Debug\net9.0\DungeonCrawler.csproj.AssemblyReference.cache
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\obj\Debug\net9.0\DungeonCrawler.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\obj\Debug\net9.0\DungeonCrawler.AssemblyInfoInputs.cache
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\obj\Debug\net9.0\DungeonCrawler.AssemblyInfo.cs
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\obj\Debug\net9.0\DungeonCrawler.csproj.CoreCompileInputs.cache
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\obj\Debug\net9.0\DungeonC.EA0EDB72.Up2Date
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\obj\Debug\net9.0\DungeonCrawler.genruntimeconfig.cache
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\obj\Debug\net9.0\ref\DungeonCrawler.dll
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\bin\Debug\net9.0\Cyotek.Drawing.BitmapFont.dll
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\bin\Debug\net9.0\FontStashSharp.Base.dll
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\bin\Debug\net9.0\FontStashSharp.MonoGame.dll
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\bin\Debug\net9.0\FontStashSharp.Rasterizers.StbTrueTypeSharp.dll
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\bin\Debug\net9.0\StbImageSharp.dll
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\bin\Debug\net9.0\StbTrueTypeSharp.dll
