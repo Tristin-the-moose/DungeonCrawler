@@ -12,6 +12,18 @@ public class Fighter
     public bool IsPlayer { get; set; }
     public SpriteEffects FlipEffect { get; set; } = SpriteEffects.None;
 
+    public EquipmentSet Equipment { get; set; }
+
+    public int EffectiveAttack => Stats.Attack + (Equipment?.TotalBonusAttack ?? 0);
+    public int EffectiveMagic => Stats.Magic + (Equipment?.TotalBonusMagic ?? 0);
+
+    public int EffectiveDefense => Stats.Defense + (Equipment?.TotalBonusDefense ?? 0);
+    public int EffectiveProtection => Stats.Defense + (Equipment?.TotalBonusProtection ?? 0);
+
+    public int EffectiveSpeed => Stats.Speed + (Equipment?.TotalBonusSpeed ?? 0);
+    public int EffectiveMaxHealth => Stats.MaxHp + (Equipment?.TotalBonusHealth ?? 0);
+
+
     // Simple hit flash
     public float FlashTimer { get; set; } = 0f;
     public bool IsFlashing => FlashTimer > 0f;
@@ -20,6 +32,8 @@ public class Fighter
     {
         Stats = stats;
         IsPlayer = isPlayer;
+        if (IsPlayer) Equipment = new EquipmentSet();
+
     }
 
     public void Update(float dt)

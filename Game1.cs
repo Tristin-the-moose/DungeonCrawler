@@ -43,6 +43,12 @@ public class Game1 : Game
         { BattleActionType.Attack, BattleActionType.Magic,
           BattleActionType.Defend, BattleActionType.Heal };
 
+    private int _titleIndex = 0;
+    private int _victoryIndex = 0;
+
+    private Equipment[] _lootChoices;
+    private int _lootIndex = 0;
+
     // ── Screen ──
     private const int ScreenW = 960;
     private const int ScreenH = 540;
@@ -155,13 +161,26 @@ public class Game1 : Game
             Attack  = save.Attack,
             Defense = save.Defense,
             Speed   = save.Speed,
-            Magic   = save.Magic
+            Magic   = save.Magic,
         };
+
+        var gear = new EquipmentSet {
+            HeadPiece = save.HeadPiece,
+            ChestPiece = save.ChestPiece,
+            Leggings = save.Leggings,
+            Booties = save.Booties,
+
+            Ring = save.Ring,
+            Necklace = save.Necklace,
+            Weapon = save.Weapon
+        };
+
         _player = new Fighter(stats, isPlayer: true)
         {
             Sprite = _playerSprite,
             Scale = 2.0f,
-            FlipEffect = SpriteEffects.None
+            FlipEffect = SpriteEffects.None,
+            Equipment = gear
         };
     }
 
@@ -178,7 +197,9 @@ public class Game1 : Game
             case GamePhase.Title:
                 UpdateTitle(kb);
                 break;
-
+            case GamePhase.Loot:
+                UpdateLoot(kb);
+                break;
             case GamePhase.Battle:
                 UpdateBattle(kb, dt);
                 break;
@@ -205,25 +226,46 @@ public class Game1 : Game
 
     private void UpdateTitle(KeyboardState kb)
     {
-        if (SaveSystem.HasSave())
+        int optionCount = SaveSystem.HasSave() ? 3 : 2;
+
+        if (WasPressed(kb, Keys.Up))
+            _titleIndex = (_titleIndex - 1 + optionCount) % optionCount;
+        if (WasPressed(kb, Keys.Down))
+            _titleIndex = (_titleIndex + 1) % optionCount;
+
+        if (WasPressed(kb, Keys.Enter) || WasPressed(kb, Keys.Space))
         {
-            if (WasPressed(kb, Keys.D1) || WasPressed(kb, Keys.NumPad1))
+            if (SaveSystem.HasSave())
             {
-                SaveSystem.Delete();
-                InitPlayer();
-                _depth = new DepthManager();
-                StartNewBattle();
+                switch (_titleIndex)
+                {
+                    case 0: // New Game
+                        SaveSystem.Delete();
+                        InitPlayer();
+                        _depth = new DepthManager();
+                        StartNewBattle();
+                        break;
+                    case 1: // Continue
+                        LoadSavedGame();
+                        StartNewBattle();
+                        break;
+                    case 2: // Exit
+                        Exit();
+                        break;
+                }
             }
-            if (WasPressed(kb, Keys.D2) || WasPressed(kb, Keys.NumPad2))
+            else
             {
-                LoadSavedGame();
-                StartNewBattle();
+                switch (_titleIndex)
+                {
+                    case 0: // Start Game
+                        StartNewBattle();
+                        break;
+                    case 1: // Exit
+                        Exit();
+                        break;
+                }
             }
-        }
-        else
-        {
-            if (WasPressed(kb, Keys.Enter))
-                StartNewBattle();
         }
     }
 
@@ -249,7 +291,10 @@ public class Game1 : Game
         if (_battle.State == BattleTurnState.BattleWon)
         {
             _depth.OnVictory();
-            _phase = GamePhase.Victory;
+            _lootChoices = LootFactory.GenerateChoices(_depth.CurrentDepth, _rng);
+            _lootIndex = 0;
+            _victoryIndex = 0;
+            _phase = GamePhase.Loot;
         }
         else if (_battle.State == BattleTurnState.BattleLost)
         {
@@ -259,28 +304,36 @@ public class Game1 : Game
     }
 
     private void UpdateVictory(KeyboardState kb)
+{
+    if (WasPressed(kb, Keys.Up))
+        _victoryIndex = (_victoryIndex - 1 + 3) % 3;
+    if (WasPressed(kb, Keys.Down))
+        _victoryIndex = (_victoryIndex + 1) % 3;
+
+    if (WasPressed(kb, Keys.Enter) || WasPressed(kb, Keys.Space))
     {
-        // 1 = Go Deeper,  2 = Save & Quit,  3 = Cash Out
-        if (WasPressed(kb, Keys.D1) || WasPressed(kb, Keys.NumPad1))
+        switch (_victoryIndex)
         {
-            _depth.GoDeeper();
-            _depth.RestBetweenFloors(_player.Stats);
-            SaveSystem.Save(_player, _depth);
-            StartNewBattle();
-        }
-        if (WasPressed(kb, Keys.D2) || WasPressed(kb, Keys.NumPad2))
-        {
-            _depth.GoDeeper();
-            _depth.RestBetweenFloors(_player.Stats);
-            SaveSystem.Save(_player, _depth);
-            _phase = GamePhase.Title;
-        }
-        if (WasPressed(kb, Keys.D3) || WasPressed(kb, Keys.NumPad3))
-        {
-            SaveSystem.Delete();
-            _phase = GamePhase.FinalScore;
+            case 0: // Go Deeper
+                _depth.GoDeeper();
+                _depth.RestBetweenFloors(_player.Stats);
+                SaveSystem.Save(_player, _depth);
+                StartNewBattle();
+                break;
+            case 1: // Save & Quit
+                _depth.GoDeeper();
+                _depth.RestBetweenFloors(_player.Stats);
+                SaveSystem.Save(_player, _depth);
+                _phase = GamePhase.Title;
+                _titleIndex = 0;
+                break;
+            case 2: // Cash Out
+                SaveSystem.Delete();
+                _phase = GamePhase.FinalScore;
+                break;
         }
     }
+}
 
     private void StartNewBattle()
     {
@@ -317,6 +370,7 @@ public class Game1 : Game
             case GamePhase.Victory:    DrawVictory();  break;
             case GamePhase.GameOver:   DrawGameOver(); break;
             case GamePhase.FinalScore: DrawScore();    break;
+            case GamePhase.Loot:       DrawLoot();     break;
         }
 
         _sb.End();
@@ -331,16 +385,25 @@ public class Game1 : Game
         _sb.DrawString(_fontLarge, title,
             new Vector2((ScreenW - size.X) / 2, 160), Color.Gold);
 
-
         if (SaveSystem.HasSave())
         {
-            CenterText("[1]  New Game", 280, Color.White);
-            CenterText("[2]  Continue", 320, Color.LimeGreen);
+            DrawTitleOption("New Game", 0, 280, Color.White);
+            DrawTitleOption("Continue", 1, 320, Color.LimeGreen);
+            DrawTitleOption("Exit", 2, 360, Color.Gray);
         }
         else
         {
-            CenterText("Press ENTER to descend...", 300, Color.Gray);
+            DrawTitleOption("Start Game", 0, 280, Color.White);
+            DrawTitleOption("Exit", 1, 320, Color.Gray);
         }
+    }
+
+    private void DrawTitleOption(string label, int index, int y, Color baseColor)
+    {
+        bool selected = _titleIndex == index;
+        string prefix = selected ? "> " : "  ";
+        Color color = selected ? Color.Yellow : baseColor;
+        CenterText(prefix + label, y, color);
     }
 
     // ── Battle Screen ──
@@ -388,19 +451,137 @@ public class Game1 : Game
         }
     }
 
+    private void DrawEquipLine(int x, ref int y, string label, Equipment item)
+    {
+        Color c = item.Rarity switch
+        {
+            0 => Color.Gray,
+            1 => Color.White,
+            2 => Color.LimeGreen,
+            3 => Color.CornflowerBlue,
+            4 => Color.Gold,
+            _ => Color.Gray
+        };
+        _sb.DrawString(_font, $"{label}: {item.Name}", new Vector2(x, y), c);
+        y += 24;
+    }
+
+    // ── Loot Selection Screen ──
+    private void UpdateLoot(KeyboardState kb)
+    {
+        if (WasPressed(kb, Keys.Left))
+            _lootIndex = (_lootIndex - 1 + _lootChoices.Length) % _lootChoices.Length;
+        if (WasPressed(kb, Keys.Right))
+            _lootIndex = (_lootIndex + 1) % _lootChoices.Length;
+
+        if (WasPressed(kb, Keys.Enter) || WasPressed(kb, Keys.Space))
+        {
+            _player.Equipment.Equip(_lootChoices[_lootIndex]);
+            _phase = GamePhase.Victory;
+        }
+
+        if (WasPressed(kb, Keys.S))
+        {
+            // Skip loot
+            _phase = GamePhase.Victory;
+        }
+    }
+
+    private void DrawLoot()
+    {
+        CenterText("Choose Your Loot!", 40, Color.Gold);
+        CenterText("Left/Right to browse, Enter to equip, S to skip", 70, Color.Gray);
+
+        // Show current equipped item for comparison
+        if (_lootChoices != null && _lootChoices.Length > 0)
+        {
+            var selected = _lootChoices[_lootIndex];
+            var current = _player.Equipment.Get(selected.EquipmentType);
+
+            // Current item
+            int curX = 80, curY = 140;
+            DrawRect(curX - 10, curY - 10, 300, 120, Color.Black * 0.8f);
+            _sb.DrawString(_font, "Currently Equipped:", new Vector2(curX, curY), Color.Gray);
+            _sb.DrawString(_font, $"{current.Name}", new Vector2(curX, curY + 26), Color.White);
+            _sb.DrawString(_font, $"{current.StatSummary()}", new Vector2(curX, curY + 52), Color.Gray);
+
+            // Loot choices
+            int startX = 80;
+            for (int i = 0; i < _lootChoices.Length; i++)
+            {
+                var item = _lootChoices[i];
+                int ix = startX + i * 280;
+                int iy = 290;
+                bool selected2 = i == _lootIndex;
+
+                Color border = selected2 ? Color.Yellow : Color.Gray;
+                Color bg = selected2 ? Color.Black * 0.9f : Color.Black * 0.6f;
+
+                DrawRect(ix - 10, iy - 10, 260, 140, bg);
+                // Highlight border
+                if (selected2)
+                {
+                    DrawRect(ix - 12, iy - 12, 264, 144, Color.Yellow * 0.3f);
+                }
+
+                Color tierColor = item.Rarity switch
+                {
+                    0 => Color.Gray,
+                    1 => Color.White,
+                    2 => Color.LimeGreen,
+                    3 => Color.CornflowerBlue,
+                    4 => Color.Gold,
+                    _ => Color.Gray
+                };
+
+                _sb.DrawString(_font, $"[{item.EquipmentType}]", new Vector2(ix, iy), Color.Gray);
+                _sb.DrawString(_font, item.Name, new Vector2(ix, iy + 26), tierColor);
+                _sb.DrawString(_font, item.StatSummary(), new Vector2(ix, iy + 52), Color.White);
+
+                // Show comparison
+                var cur = _player.Equipment.Get(item.EquipmentType);
+                string cmp = CompareGear(item, cur);
+                Color cmpColor = cmp.Contains("+") ? Color.LimeGreen : Color.Red;
+                if (cmp == "Same") cmpColor = Color.Gray;
+                _sb.DrawString(_font, cmp, new Vector2(ix, iy + 82), cmpColor);
+            }
+        }
+    }
+
+    private string CompareGear(Equipment newItem, Equipment current)
+    {
+        int diff = (newItem.AttackBonus - current.AttackBonus)
+                 + (newItem.DefenseBonus - current.DefenseBonus)
+                 + (newItem.SpeedBoost - current.SpeedBoost)
+                 + (newItem.MagicBonus - current.MagicBonus)
+                 + (newItem.HealthBonus - current.HealthBonus);
+
+        if (diff > 0) return $"+{diff} total stats";
+        if (diff < 0) return $"{diff} total stats";
+        return "Same";
+    }
+
     // ── Victory / Continue Screen ──
     private void DrawVictory()
     {
         string msg = $"Victory!  Depth: {_depth.CurrentDepth}  " +
-                     $"Score: {_depth.Score}";
+                    $"Score: {_depth.Score}";
         CenterText(msg, 140, Color.Gold);
 
         string hp = $"HP: {_player.Stats.Hp}/{_player.Stats.MaxHp}";
         CenterText(hp, 200, Color.LightGreen);
 
-        CenterText("[1]  Go Deeper", 280, Color.White);
-        CenterText("[2]  Save & Quit", 320, Color.CornflowerBlue);
-        CenterText("[3]  Cash Out", 360, Color.Gray);
+        DrawVictoryOption("Go Deeper",   0, 280, Color.White);
+        DrawVictoryOption("Save & Quit", 1, 320, Color.CornflowerBlue);
+        DrawVictoryOption("Cash Out",    2, 360, Color.Gray);
+    }
+
+    private void DrawVictoryOption(string label, int index, int y, Color baseColor)
+    {
+        bool selected = _victoryIndex == index;
+        string prefix = selected ? "> " : "  ";
+        Color color = selected ? Color.Yellow : baseColor;
+        CenterText(prefix + label, y, color);
     }
 
     // ── Game Over ──

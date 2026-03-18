@@ -18,7 +18,6 @@ public class Stats
 
     public void TakeDamage(int amount)
     {
-        int actual = Math.Max(0, amount - Defense / 2);
-        Hp = Math.Max(0, Hp - actual);
+        Hp = Math.Max(0, Hp - amount);
     }
 }

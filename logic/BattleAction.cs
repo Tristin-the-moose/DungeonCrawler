@@ -18,26 +18,31 @@ public class BattleAction
     public Fighter Source { get; set; }
     public Fighter Target { get; set; }
 
-    /// <summary>Resolve this action and return a log message.</summary>
     public string Execute(Random rng)
     {
         switch (Type)
         {
             case BattleActionType.Attack:
             {
-                int dmg = Source.Stats.Attack + rng.Next(-2, 4);
-                Target.Stats.TakeDamage(dmg);
+                int atk = Source.IsPlayer ? Source.EffectiveAttack : Source.Stats.Attack ;
+                int def = Target.IsPlayer ? Target.EffectiveDefense : Target.Stats.Defense;
+
+                int dealt = (atk - def) < 0 ? 1 : (atk - def);
+
+                Target.Stats.TakeDamage(dealt);
                 Target.FlashTimer = 0.3f;
-                int dealt = Math.Max(0, dmg - Target.Stats.Defense / 2);
                 return $"{Source.Stats.Name} attacks for {dealt} damage!";
             }
 
             case BattleActionType.Magic:
             {
-                int dmg = Source.Stats.Magic * 2 + rng.Next(0, 5);
-                Target.Stats.TakeDamage(dmg);
-                Target.FlashTimer = 0.4f;
-                int dealt = Math.Max(0, dmg - Target.Stats.Defense / 2);
+                int atk = Source.IsPlayer ? Source.EffectiveMagic : Source.Stats.Magic ;
+                int def = Target.IsPlayer ? Target.EffectiveProtection : Target.Stats.Defense;
+
+                int dealt = (atk - def) < 0 ? 1 : (atk - def);
+
+                Target.Stats.TakeDamage(dealt);
+                Target.FlashTimer = 0.3f;
                 return $"{Source.Stats.Name} casts a spell for {dealt} damage!";
             }
 

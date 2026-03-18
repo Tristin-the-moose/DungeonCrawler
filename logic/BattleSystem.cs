@@ -12,7 +12,8 @@ public enum BattleTurnState
     Animating,
     EnemyTurn,
     BattleWon,
-    BattleLost
+    BattleLost,
+    BattleLoot
 }
 
 public class BattleSystem
@@ -59,8 +60,11 @@ public class BattleSystem
             Type = enemyAction, Source = Enemy, Target = Player
         });
 
-        // Determine turn order by speed
-        if (Enemy.Stats.Speed > Player.Stats.Speed)
+        
+        int playerSpd = Player.IsPlayer ? Player.EffectiveSpeed : Player.Stats.Speed;
+        int enemySpd = Enemy.IsPlayer ? Enemy.EffectiveSpeed : Enemy.Stats.Speed;
+
+        if (enemySpd > playerSpd)
         {
             var list = _pendingActions.ToList();
             list.Reverse();

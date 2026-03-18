@@ -6,5 +6,6 @@ public enum GamePhase
     Battle,
     Victory,     
     GameOver,
-    FinalScore
+    FinalScore,
+    Loot
 }

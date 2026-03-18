@@ -26,6 +26,17 @@ public class SaveData
     public int Speed { get; set; }
     public int Magic { get; set; }
 
+    public Equipment HeadPiece { get; set; }
+    public Equipment ChestPiece { get; set; }
+    public Equipment Leggings { get; set; }
+    public Equipment Booties { get; set; }
+
+    public Equipment Ring { get; set; }
+
+    public Equipment Necklace { get; set; }
+
+    public Equipment Weapon { get; set; }
+
     public DateTime SavedAt { get; set; }
 }
 
@@ -55,6 +66,17 @@ public static class SaveSystem
             Defense    = player.Stats.Defense,
             Speed      = player.Stats.Speed,
             Magic      = player.Stats.Magic,
+
+            HeadPiece = player.Equipment.HeadPiece,
+            ChestPiece = player.Equipment.ChestPiece,
+            Leggings = player.Equipment.Leggings,
+            Booties = player.Equipment.Booties,
+
+            Ring = player.Equipment.Ring,
+
+            Necklace = player.Equipment.Necklace,
+
+            Weapon = player.Equipment.Weapon,
 
             SavedAt = DateTime.Now
         };
