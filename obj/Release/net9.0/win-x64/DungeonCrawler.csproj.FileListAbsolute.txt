@@ -209,3 +209,4 @@ C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\obj\Release\net9.0\
 C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\obj\Release\net9.0\win-x64\DungeonCrawler.pdb
 C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\obj\Release\net9.0\win-x64\DungeonCrawler.genruntimeconfig.cache
 C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\obj\Release\net9.0\win-x64\ref\DungeonCrawler.dll
+C:\Users\Tristin.Colenso\Documents\GameDesign\DungeonCrawler\obj\Release\net9.0\win-x64\DungeonCrawler.sourcelink.json
