@@ -98,9 +98,8 @@ public class BattleScreen : IGameScreen
         _battle.Enemy.Draw(sb);
         _battle.Player.Draw(sb);
 
-        // HP Bars
+        // HP Bar (player only)
         DrawHelpers.DrawHpBar(sb, 20, 20, 200, 20, _battle.Player);
-        DrawHelpers.DrawHpBar(sb, Game1.ScreenW - 220, 20, 200, 20, _battle.Enemy);
 
         // Action menu
         if (_battle.State == BattleTurnState.PlayerChoosing)

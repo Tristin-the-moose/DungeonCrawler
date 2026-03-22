@@ -2,14 +2,13 @@
 // FILE: screens/LootScreen.cs — Post-battle loot selection
 // ============================================================
 using System;
+using FontStashSharp;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using DungeonCrawler.models;
 using DungeonCrawler.logic;
 using DungeonCrawler.utils;
-
-using FontStashSharp;
 
 namespace DungeonCrawler.screens;
 
@@ -24,7 +23,7 @@ public class LootScreen : IGameScreen
     {
         _ctx = ctx;
         _setScreen = setScreen;
-        _lootChoices = LootFactory.GenerateChoices(ctx.Depth.CurrentDepth, ctx.Rng);
+        _lootChoices = LootFactory.GenerateChoices(ctx.Depth.CurrentDepth, ctx.Rng, ctx.Player.Equipment);
         _menu = new MenuSelector(_lootChoices.Length);
     }
 

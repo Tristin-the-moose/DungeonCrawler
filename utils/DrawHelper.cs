@@ -3,7 +3,6 @@
 // ============================================================
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-
 using FontStashSharp;
 
 namespace DungeonCrawler.utils;
@@ -48,7 +47,7 @@ public static class DrawHelpers
 
         string label = $"{f.Stats.Name} {f.Stats.Hp}/{f.Stats.MaxHp}";
         sb.DrawString(Game1.Resources.Font, label,
-            new Vector2(x + 4, y + 1), Color.White);
+            new Vector2(x + 4, y + 1), Color.Black);
     }
 
     /// <summary>

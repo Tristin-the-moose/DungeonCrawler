@@ -94,7 +94,11 @@ public class BattleSystem
             var action = _pendingActions.Dequeue();
 
             if (action.Source.Stats.IsAlive)
-                Log.Add(action.Execute(_rng));
+            {
+                string[] messages = action.Execute(_rng);
+                foreach (var msg in messages)
+                    Log.Add(msg);
+            }
 
             _animTimer = GameConfig.Instance.BetweenActionDelay;
         }

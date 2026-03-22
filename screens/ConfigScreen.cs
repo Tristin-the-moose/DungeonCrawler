@@ -21,7 +21,7 @@ public class ConfigScreen : IGameScreen
     private readonly List<ConfigEntry> _entries = new();
     private int _selectedIndex;
     private int _scrollOffset;
-    private const int VisibleRows = 14;
+    private const int MaxDrawY = 480;  // stop drawing entries below this Y value
 
     // ── Input ──
     private KeyboardState _prevKb;
@@ -49,6 +49,8 @@ public class ConfigScreen : IGameScreen
         // Combat
         ["MinDamage"]                = "COMBAT",
         ["DefendBoost"]              = "COMBAT",
+        ["DefendBlockPercent"]       = "COMBAT",
+        ["DefendCounterMultiplier"]  = "COMBAT",
         ["HealBase"]                 = "COMBAT",
         ["DamageVariance"]           = "COMBAT",
         ["CritChance"]               = "COMBAT",
@@ -74,7 +76,10 @@ public class ConfigScreen : IGameScreen
         ["LootTierDivisor"]          = "LOOT",
         ["LootMaxTier"]              = "LOOT",
         ["LootBaseStatValue"]        = "LOOT",
-        ["LootStatPerTier"]          = "LOOT",
+        ["LootScaleExponent"]        = "LOOT",
+        ["LootScaleMultiplier"]      = "LOOT",
+        ["CursedLootChance"]         = "LOOT",
+        ["MaxRerollAttempts"]        = "LOOT",
     };
 
     public ConfigScreen(Action<IGameScreen> setScreen, IGameScreen returnScreen)
@@ -125,11 +130,7 @@ public class ConfigScreen : IGameScreen
         if (WasPressed(kb, Keys.Down))
             _selectedIndex = (_selectedIndex + 1) % _entries.Count;
 
-        // Scroll to keep selection visible
-        if (_selectedIndex < _scrollOffset)
-            _scrollOffset = _selectedIndex;
-        if (_selectedIndex >= _scrollOffset + VisibleRows)
-            _scrollOffset = _selectedIndex - VisibleRows + 1;
+        // Adjust scroll to keep selection visible — we'll calculate during Draw
 
         // Edit values
         var entry = _entries[_selectedIndex];
@@ -179,6 +180,13 @@ public class ConfigScreen : IGameScreen
             _setScreen(_returnScreen);
         }
 
+        // Reset to defaults
+        if (WasPressed(kb, Keys.Delete))
+        {
+            GameConfig.ResetToDefaults();
+            GameLogger.Info("Config reset to defaults");
+        }
+
         // Handle hold key reset
         if (_heldKey.HasValue && kb.IsKeyUp(_heldKey.Value))
         {
@@ -195,15 +203,39 @@ public class ConfigScreen : IGameScreen
 
         DrawHelpers.CenterTextLarge(sb, "SETTINGS", 10, Color.Gold);
 
-        // Column headers
-        int nameX = 40, valX = 420, y = 55;
-        sb.DrawString(font, "Setting", new Vector2(nameX, y), Color.Gray);
-        sb.DrawString(font, "Value", new Vector2(valX, y), Color.Gray);
-        y += 26;
+        // Column headers (draw after entries so they stay on top)
+        int nameX = 40, valX = 420, startY = 55;
+        int headerHeight = 30;
+        int contentTop = startY + headerHeight;
 
-        // Draw visible entries
+        // First pass: figure out the Y position of the selected item
+        int tempY = contentTop;
+        string tempLastCat = "";
+        int selectedY = tempY;
+        for (int i = 0; i < _entries.Count; i++)
+        {
+            if (_entries[i].Category != tempLastCat)
+            {
+                tempY += 22;
+                tempLastCat = _entries[i].Category;
+            }
+            if (i == _selectedIndex)
+                selectedY = tempY;
+            tempY += 26;
+        }
+
+        // Adjust scroll so selected item is visible
+        if (selectedY - _scrollOffset < contentTop)
+            _scrollOffset = selectedY - contentTop;
+        if (selectedY - _scrollOffset > MaxDrawY - 26)
+            _scrollOffset = selectedY - (MaxDrawY - 26);
+        if (_scrollOffset < 0)
+            _scrollOffset = 0;
+
+        // Second pass: draw with scroll offset
+        int y = contentTop - _scrollOffset;
         string lastCategory = "";
-        for (int i = _scrollOffset; i < Math.Min(_scrollOffset + VisibleRows, _entries.Count); i++)
+        for (int i = 0; i < _entries.Count; i++)
         {
             var entry = _entries[i];
             bool selected = i == _selectedIndex;
@@ -211,49 +243,56 @@ public class ConfigScreen : IGameScreen
             // Category header
             if (entry.Category != lastCategory)
             {
-                sb.DrawString(font, $"── {entry.Category} ──", new Vector2(nameX, y), Color.DarkGray);
+                if (y >= contentTop && y < MaxDrawY)
+                    sb.DrawString(font, $"── {entry.Category} ──", new Vector2(nameX, y), Color.DarkGray);
                 y += 22;
                 lastCategory = entry.Category;
             }
 
-            // Background highlight
-            if (selected)
-                DrawHelpers.DrawRect(sb, nameX - 5, y - 2, Game1.ScreenW - 70, 24, Color.White * 0.1f);
-
-            // Name
-            Color nameColor = selected ? Color.Yellow : Color.White;
-            string displayName = FormatName(entry.Name);
-            sb.DrawString(font, displayName, new Vector2(nameX, y), nameColor);
-
-            // Value
-            object val = entry.Property.GetValue(GameConfig.Instance);
-            string valStr = val is float f ? f.ToString("F2") : val.ToString();
-            Color valColor = selected ? Color.LimeGreen : Color.CornflowerBlue;
-            sb.DrawString(font, valStr, new Vector2(valX, y), valColor);
-
-            // Edit hint for selected row
-            if (selected)
+            // Skip entries outside visible area
+            if (y >= contentTop && y < MaxDrawY)
             {
-                string hint = entry.Property.PropertyType == typeof(bool)
-                    ? "<Left/Right> Toggle"
-                    : "<Left/Right> Adjust  |  Hold Shift for 10x";
-                sb.DrawString(font, hint, new Vector2(valX + 150, y), Color.DarkGray);
+                // Background highlight
+                if (selected)
+                    DrawHelpers.DrawRect(sb, nameX - 5, y - 2, Game1.ScreenW - 70, 24, Color.White * 0.1f);
+
+                // Name
+                Color nameColor = selected ? Color.Yellow : Color.White;
+                string displayName = FormatName(entry.Name);
+                sb.DrawString(font, displayName, new Vector2(nameX, y), nameColor);
+
+                // Value
+                object val = entry.Property.GetValue(GameConfig.Instance);
+                string valStr = val is float f ? f.ToString("F2") : val.ToString();
+                Color valColor = selected ? Color.LimeGreen : Color.CornflowerBlue;
+                sb.DrawString(font, valStr, new Vector2(valX, y), valColor);
+
+                // Edit hint for selected row
+                if (selected)
+                {
+                    string hint = entry.Property.PropertyType == typeof(bool)
+                        ? "<Left/Right> Toggle"
+                        : "<Left/Right> Adjust  |  Hold Shift for 10x";
+                    sb.DrawString(font, hint, new Vector2(valX + 150, y), Color.DarkGray);
+                }
             }
 
             y += 26;
         }
 
+        // Column header bar — drawn last so it covers scrolled content
+        DrawHelpers.DrawRect(sb, 0, startY - 4, Game1.ScreenW, headerHeight, Color.Black);
+        sb.DrawString(font, "Setting", new Vector2(nameX, startY), Color.Gray);
+        sb.DrawString(font, "Value", new Vector2(valX, startY), Color.Gray);
+
         // Scroll indicator
-        if (_entries.Count > VisibleRows)
-        {
-            string scroll = $"({_selectedIndex + 1}/{_entries.Count})";
-            sb.DrawString(font, scroll, new Vector2(Game1.ScreenW - 120, 55), Color.Gray);
-        }
+        string scroll = $"({_selectedIndex + 1}/{_entries.Count})";
+        sb.DrawString(font, scroll, new Vector2(Game1.ScreenW - 120, startY), Color.Gray);
 
         // Footer
         int footerY = Game1.ScreenH - 40;
         DrawHelpers.DrawRect(sb, 0, footerY - 8, Game1.ScreenW, 40, Color.Black * 0.8f);
-        DrawHelpers.CenterText(sb, "ENTER = Save & Back  |  ESC = Discard & Back", footerY, Color.Gray);
+        DrawHelpers.CenterText(sb, "ENTER = Save & Back  |  ESC = Discard & Back  |  DEL = Reset Defaults", footerY, Color.Gray);
     }
 
     /// <summary>Converts "EnemyBaseHp" to "Enemy Base Hp"</summary>

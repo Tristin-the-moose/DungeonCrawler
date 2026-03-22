@@ -19,6 +19,7 @@ public class Fighter
 
     // ── Temporary buffs (reset each turn by BattleSystem) ──
     public int DefendBuff { get; set; }
+    public bool IsDefending { get; set; }
 
     // ── Effective stats (base + gear + temp buffs) ──
     public int EffectiveAttack    => Stats.Attack  + (Equipment?.TotalBonusAttack ?? 0);
@@ -28,7 +29,11 @@ public class Fighter
     public int EffectiveMaxHealth => Stats.MaxHp   + (Equipment?.TotalBonusHealth ?? 0);
     public int EffectiveProtection => (Equipment?.TotalBonusProtection ?? 0) + DefendBuff;
 
-    public void ResetBuffs() => DefendBuff = 0;
+    public void ResetBuffs()
+    {
+        DefendBuff = 0;
+        IsDefending = false;
+    }
 
     /// <summary>Whether this fighter's weapon deals magic damage.</summary>
     public bool UsesMagicAttack => Equipment?.Weapon?.IsMagicWeapon ?? false;

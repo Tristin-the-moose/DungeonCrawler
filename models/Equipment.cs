@@ -45,12 +45,12 @@ public class Equipment
     public string StatSummary()
     {
         var parts = new List<string>(6);
-        if (HealthBonus > 0)     parts.Add($"+{HealthBonus} HP");
-        if (AttackBonus > 0)     parts.Add($"+{AttackBonus} ATK");
-        if (DefenseBonus > 0)    parts.Add($"+{DefenseBonus} DEF");
-        if (SpeedBoost > 0)      parts.Add($"+{SpeedBoost} SPD");
-        if (MagicBonus > 0)      parts.Add($"+{MagicBonus} MAG");
-        if (ProtectionBonus > 0) parts.Add($"+{ProtectionBonus} PROT");
+        if (HealthBonus != 0)     parts.Add($"{HealthBonus:+#;-#;0} HP");
+        if (AttackBonus != 0)     parts.Add($"{AttackBonus:+#;-#;0} ATK");
+        if (DefenseBonus != 0)    parts.Add($"{DefenseBonus:+#;-#;0} DEF");
+        if (SpeedBoost != 0)      parts.Add($"{SpeedBoost:+#;-#;0} SPD");
+        if (MagicBonus != 0)      parts.Add($"{MagicBonus:+#;-#;0} MAG");
+        if (ProtectionBonus != 0) parts.Add($"{ProtectionBonus:+#;-#;0} PROT");
         return parts.Count > 0 ? string.Join(", ", parts) : "No bonuses";
     }
 }

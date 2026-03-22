@@ -45,6 +45,8 @@ public class GameConfig
     // ════════════════════════════════════════════
     public int MinDamage { get; set; } = 1;
     public int DefendBoost { get; set; } = 3;
+    public float DefendBlockPercent { get; set; } = 0.40f;   // block 40% of incoming damage
+    public float DefendCounterMultiplier { get; set; } = 0.5f; // counter for 50% of normal attack
     public int HealBase { get; set; } = 10;
     public float DamageVariance { get; set; } = 0.15f;
     public int CritChance { get; set; } = 10;          // % chance to crit
@@ -80,6 +82,10 @@ public class GameConfig
     public int LootMaxTier { get; set; } = 4;
     public int LootBaseStatValue { get; set; } = 2;
     public int LootStatPerTier { get; set; } = 2;     // baseVal = LootBaseStatValue + tier * this
+    public int CursedLootChance { get; set; } = 15;    // % chance an item is cursed (high stat + penalty)
+    public int MaxRerollAttempts { get; set; } = 20;   // max re-rolls to guarantee an upgrade
+    public float LootScaleMultiplier { get; set; } = 2.5f;
+    public float LootScaleExponent { get; set; } = 1.8f;
 
     // ════════════════════════════════════════════
     //  LOAD / SAVE / GENERATE
@@ -143,5 +149,15 @@ public class GameConfig
     {
         _instance = Load();
         GameLogger.Info("Config reloaded");
+    }
+
+    /// <summary>
+    /// Reset all values to compiled defaults, save to disk, and update the singleton.
+    /// </summary>
+    public static void ResetToDefaults()
+    {
+        _instance = new GameConfig();
+        _instance.Save();
+        GameLogger.Info("Config reset to defaults");
     }
 }

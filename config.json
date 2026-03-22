@@ -9,10 +9,13 @@
   "StartingDefense": 5,
   "StartingSpeed": 7,
   "StartingMagic": 8,
+  "StartWithMagicWeapon": false,
   "MinDamage": 1,
   "DefendBoost": 3,
   "HealBase": 10,
   "DamageVariance": 0.15,
+  "CritChance": 10,
+  "CritMultiplier": 1.75,
   "PreActionDelay": 0.6,
   "BetweenActionDelay": 0.8,
   "EnemyAttackChance": 70,
@@ -31,5 +34,7 @@
   "LootTierDivisor": 2,
   "LootMaxTier": 4,
   "LootBaseStatValue": 2,
-  "LootStatPerTier": 2
+  "LootStatPerTier": 2,
+  "CursedLootChance": 15,
+  "MaxRerollAttempts": 20
 }
