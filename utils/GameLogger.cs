@@ -1,3 +1,6 @@
+// ============================================================
+// FILE: utils/GameLogger.cs — Simple file logger
+// ============================================================
 using System;
 using System.IO;
 
@@ -10,23 +13,12 @@ public static class GameLogger
             Environment.SpecialFolder.LocalApplicationData),
             "DungeonCrawler", "logs");
 
-    private static readonly string LogFile =
-        Path.Combine(LogDir, $"game_{DateTime.Now:yyyy-MM-dd}.log");
+    private static readonly object Lock = new();
+    private static StreamWriter _writer;
+    private static string _currentDate;
 
-    static GameLogger()
-    {
-        Directory.CreateDirectory(LogDir);
-    }
-
-    public static void Info(string message)
-    {
-        Write("INFO", message);
-    }
-
-    public static void Warn(string message)
-    {
-        Write("WARN", message);
-    }
+    public static void Info(string message) => Write("INFO", message);
+    public static void Warn(string message) => Write("WARN", message);
 
     public static void Error(string message, Exception ex = null)
     {
@@ -43,14 +35,48 @@ public static class GameLogger
 
     private static void Write(string level, string message)
     {
-        try
+        lock (Lock)
         {
-            string line = $"[{DateTime.Now:HH:mm:ss.fff}] [{level}] {message}";
-            File.AppendAllText(LogFile, line + Environment.NewLine);
+            try
+            {
+                EnsureWriter();
+                _writer.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] [{level}] {message}");
+                _writer.Flush();
+            }
+            catch
+            {
+                // If logging itself fails, silently ignore
+            }
         }
-        catch
+    }
+
+    /// <summary>
+    /// Opens a writer if needed, or rolls to a new file at midnight.
+    /// Replaces File.AppendAllText which opened/closed the file on every call.
+    /// </summary>
+    private static void EnsureWriter()
+    {
+        string today = DateTime.Now.ToString("yyyy-MM-dd");
+
+        if (_writer != null && _currentDate == today) return;
+
+        _writer?.Dispose();
+        Directory.CreateDirectory(LogDir);
+        string path = Path.Combine(LogDir, $"game_{today}.log");
+        _writer = new StreamWriter(path, append: true);
+        _currentDate = today;
+    }
+
+    /// <summary>
+    /// Call from Game1.UnloadContent() or Program.cs to cleanly close the log.
+    /// </summary>
+    public static void Shutdown()
+    {
+        lock (Lock)
         {
-            // If logging itself fails, silently ignore
+            _writer?.Flush();
+            _writer?.Dispose();
+            _writer = null;
         }
     }
 }

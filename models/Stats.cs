@@ -1,3 +1,6 @@
+// ============================================================
+// FILE: models/Stats.cs — Base stat block for any combatant
+// ============================================================
 using System;
 
 namespace DungeonCrawler.models;
@@ -13,11 +16,15 @@ public class Stats
     public int Magic { get; set; }
 
     public bool IsAlive => Hp > 0;
-
     public float HpPercent => MaxHp > 0 ? (float)Hp / MaxHp : 0f;
 
     public void TakeDamage(int amount)
     {
         Hp = Math.Max(0, Hp - amount);
+    }
+
+    public void Heal(int amount)
+    {
+        Hp = Math.Min(MaxHp, Hp + amount);
     }
 }

@@ -1,7 +1,8 @@
+// ============================================================
+// FILE: logic/BattleSystem.cs — Turn-based battle engine
+// ============================================================
 using System;
-using System.Linq;
 using System.Collections.Generic;
-
 using DungeonCrawler.models;
 
 namespace DungeonCrawler.logic;
@@ -12,27 +13,31 @@ public enum BattleTurnState
     Animating,
     EnemyTurn,
     BattleWon,
-    BattleLost,
-    BattleLoot
+    BattleLost
 }
 
 public class BattleSystem
 {
+    // ── Timing constants (were magic numbers) ──
+    private const float PreActionDelay = 0.6f;
+    private const float BetweenActionDelay = 0.8f;
+
     public Fighter Player { get; }
     public Fighter Enemy { get; }
     public BattleTurnState State { get; set; }
     public List<string> Log { get; } = new();
     public int Depth { get; }
 
-    private Random _rng = new();
+    private readonly Random _rng;
     private float _animTimer;
-    private Queue<BattleAction> _pendingActions = new();
+    private readonly Queue<BattleAction> _pendingActions = new();
 
-    public BattleSystem(Fighter player, Fighter enemy, int depth)
+    public BattleSystem(Fighter player, Fighter enemy, int depth, Random rng)
     {
         Player = player;
         Enemy = enemy;
         Depth = depth;
+        _rng = rng;   // shared RNG from GameContext — no more new Random() per battle
         State = BattleTurnState.PlayerChoosing;
         Log.Add($"A wild {enemy.Stats.Name} appears! (Depth {depth})");
     }
@@ -42,37 +47,43 @@ public class BattleSystem
     {
         if (State != BattleTurnState.PlayerChoosing) return;
 
-        var target = type is BattleActionType.Defend or BattleActionType.Heal
+        // Reset temporary defend buffs at the start of each turn
+        Player.ResetBuffs();
+        Enemy.ResetBuffs();
+
+        var playerTarget = type is BattleActionType.Defend or BattleActionType.Heal
             ? Player : Enemy;
 
-        _pendingActions.Enqueue(new BattleAction
+        var playerAction = new BattleAction
         {
-            Type = type, Source = Player, Target = target
-        });
+            Type = type, Source = Player, Target = playerTarget
+        };
 
-        // Enemy auto-picks
-        var enemyAction = _rng.Next(100) < 70
+        // Enemy auto-picks (70% attack, 30% magic)
+        var enemyType = _rng.Next(100) < 70
             ? BattleActionType.Attack
             : BattleActionType.Magic;
 
-        _pendingActions.Enqueue(new BattleAction
+        var enemyAction = new BattleAction
         {
-            Type = enemyAction, Source = Enemy, Target = Player
-        });
+            Type = enemyType, Source = Enemy, Target = Player
+        };
 
-        
-        int playerSpd = Player.IsPlayer ? Player.EffectiveSpeed : Player.Stats.Speed;
-        int enemySpd = Enemy.IsPlayer ? Enemy.EffectiveSpeed : Enemy.Stats.Speed;
-
-        if (enemySpd > playerSpd)
+        // Enqueue in speed order directly — no list/reverse needed
+        // Both fighters use EffectiveSpeed so equipment bonuses apply to all
+        if (Enemy.EffectiveSpeed > Player.EffectiveSpeed)
         {
-            var list = _pendingActions.ToList();
-            list.Reverse();
-            _pendingActions = new Queue<BattleAction>(list);
+            _pendingActions.Enqueue(enemyAction);
+            _pendingActions.Enqueue(playerAction);
+        }
+        else
+        {
+            _pendingActions.Enqueue(playerAction);
+            _pendingActions.Enqueue(enemyAction);
         }
 
         State = BattleTurnState.Animating;
-        _animTimer = 0.6f; // pause before first action resolves
+        _animTimer = PreActionDelay;
     }
 
     /// <summary>Called every frame during battle.</summary>
@@ -91,14 +102,10 @@ public class BattleSystem
         {
             var action = _pendingActions.Dequeue();
 
-            // Skip if source is dead
             if (action.Source.Stats.IsAlive)
-            {
-                string msg = action.Execute(_rng);
-                Log.Add(msg);
-            }
+                Log.Add(action.Execute(_rng));
 
-            _animTimer = 0.8f; // pause between actions
+            _animTimer = BetweenActionDelay;
         }
 
         // Check end conditions after all actions resolve

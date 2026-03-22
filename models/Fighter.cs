@@ -1,3 +1,6 @@
+// ============================================================
+// FILE: models/Fighter.cs — A combatant (player or enemy)
+// ============================================================
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -11,29 +14,38 @@ public class Fighter
     public float Scale { get; set; } = 1.0f;
     public bool IsPlayer { get; set; }
     public SpriteEffects FlipEffect { get; set; } = SpriteEffects.None;
-
     public EquipmentSet Equipment { get; set; }
 
-    public int EffectiveAttack => Stats.Attack + (Equipment?.TotalBonusAttack ?? 0);
-    public int EffectiveMagic => Stats.Magic + (Equipment?.TotalBonusMagic ?? 0);
+    // ── Temporary buffs (reset each turn by BattleSystem) ──
+    public int DefendBuff { get; set; }
 
-    public int EffectiveDefense => Stats.Defense + (Equipment?.TotalBonusDefense ?? 0);
-    public int EffectiveProtection => Stats.Defense + (Equipment?.TotalBonusProtection ?? 0);
+    // ── Effective stats (base + gear + temp buffs) ──
+    // All fighters use the same formula — enemies have null Equipment
+    // which falls through to 0 via the null-coalescing operator.
+    public int EffectiveAttack    => Stats.Attack  + (Equipment?.TotalBonusAttack ?? 0);
+    public int EffectiveMagic     => Stats.Magic   + (Equipment?.TotalBonusMagic ?? 0);
+    public int EffectiveDefense   => Stats.Defense + (Equipment?.TotalBonusDefense ?? 0) + DefendBuff;
+    public int EffectiveSpeed     => Stats.Speed   + (Equipment?.TotalBonusSpeed ?? 0);
+    public int EffectiveMaxHealth => Stats.MaxHp   + (Equipment?.TotalBonusHealth ?? 0);
 
-    public int EffectiveSpeed => Stats.Speed + (Equipment?.TotalBonusSpeed ?? 0);
-    public int EffectiveMaxHealth => Stats.MaxHp + (Equipment?.TotalBonusHealth ?? 0);
+    // BUG FIX: Original had EffectiveProtection using Stats.Defense.
+    // Now correctly uses ProtectionBonus as its own stat category, plus defend buff.
+    public int EffectiveProtection => (Equipment?.TotalBonusProtection ?? 0) + DefendBuff;
 
+    public void ResetBuffs() => DefendBuff = 0;
 
-    // Simple hit flash
-    public float FlashTimer { get; set; } = 0f;
+    // ── Hit flash ──
+    private const float FlashDuration = 0.3f;
+    public float FlashTimer { get; set; }
     public bool IsFlashing => FlashTimer > 0f;
+
+    public void TriggerFlash() => FlashTimer = FlashDuration;
 
     public Fighter(Stats stats, bool isPlayer)
     {
         Stats = stats;
         IsPlayer = isPlayer;
-        if (IsPlayer) Equipment = new EquipmentSet();
-
+        if (isPlayer) Equipment = new EquipmentSet();
     }
 
     public void Update(float dt)
@@ -46,6 +58,6 @@ public class Fighter
     {
         Color tint = IsFlashing ? Color.Red : Color.White;
         sb.Draw(Sprite, Position, null, tint, 0f,
-            Vector2.Zero, Scale, FlipEffect, 0f);
+                Vector2.Zero, Scale, FlipEffect, 0f);
     }
 }

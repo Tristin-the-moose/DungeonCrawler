@@ -1,115 +1,96 @@
+// ============================================================
+// FILE: models/Equipment.cs — Equipment item + slot management
+// ============================================================
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace DungeonCrawler.models;
 
-public enum EquipmentSlots {
+public enum EquipmentSlots
+{
     HeadPiece, ChestPiece, Leggings, Booties, Weapon, Ring, Necklace
 }
 
-public class Equipment {
+public class Equipment
+{
     public string Name { get; set; } = "Unknown";
-
     public EquipmentSlots EquipmentType { get; set; }
+    public int HealthBonus { get; set; }
+    public int AttackBonus { get; set; }
+    public int MagicBonus { get; set; }
+    public int DefenseBonus { get; set; }
+    public int ProtectionBonus { get; set; }
+    public int SpeedBoost { get; set; }
+    public int Rarity { get; set; }
 
-    public int HealthBonus { get; set; } = 0;
-
-    public int AttackBonus { get; set; } = 0;
-    public int MagicBonus { get; set; } = 0;
-
-    public int DefenseBonus { get; set; } = 0;
-    public int ProtectionBonus { get; set; } = 0;
-
-    public int SpeedBoost { get; set; } = 0;
-
-    public int Rarity { get; set; } = 0;
+    /// <summary>Total of all stat bonuses on this item.</summary>
+    public int TotalStats => HealthBonus + AttackBonus + MagicBonus
+                           + DefenseBonus + ProtectionBonus + SpeedBoost;
 
     public string StatSummary()
     {
-        var parts = new List<string>();
-        if (HealthBonus > 0)  parts.Add($"+{HealthBonus} HP");
-        if (AttackBonus > 0)  parts.Add($"+{AttackBonus} ATK");
-        if (DefenseBonus > 0) parts.Add($"+{DefenseBonus} DEF");
-        if (SpeedBoost > 0)   parts.Add($"+{SpeedBoost} SPD");
-        if (MagicBonus > 0)   parts.Add($"+{MagicBonus} MAG");
+        var parts = new List<string>(6);
+        if (HealthBonus > 0)     parts.Add($"+{HealthBonus} HP");
+        if (AttackBonus > 0)     parts.Add($"+{AttackBonus} ATK");
+        if (DefenseBonus > 0)    parts.Add($"+{DefenseBonus} DEF");
+        if (SpeedBoost > 0)      parts.Add($"+{SpeedBoost} SPD");
+        if (MagicBonus > 0)      parts.Add($"+{MagicBonus} MAG");
+        if (ProtectionBonus > 0) parts.Add($"+{ProtectionBonus} PROT");
         return parts.Count > 0 ? string.Join(", ", parts) : "No bonuses";
     }
 }
 
-public class EquipmentSet {
-    public Equipment HeadPiece { get; set; }
-    public Equipment ChestPiece { get; set; }
-    public Equipment Leggings { get; set; }
-    public Equipment Booties { get; set; }
+public class EquipmentSet
+{
+    // ── Dictionary-backed storage replaces 7 individual properties ──
+    // This eliminates the duplicated Get/Equip switch blocks and
+    // the 6 copy-pasted TotalBonus properties (42 null-checks → 1 loop).
+    private readonly Dictionary<EquipmentSlots, Equipment> _slots = new();
 
-    public Equipment Ring { get; set; }
-
-    public Equipment Necklace { get; set; }
-
-    public Equipment Weapon { get; set; }
-
-    public EquipmentSet() {
-        HeadPiece = new Equipment { EquipmentType = EquipmentSlots.HeadPiece, Name = "Default Cap" };
-        ChestPiece = new Equipment { EquipmentType = EquipmentSlots.ChestPiece, Name = "Default Chestpiece" };
-        Leggings = new Equipment { EquipmentType = EquipmentSlots.Leggings, Name = "Default Leggings" };
-        Booties = new Equipment { EquipmentType = EquipmentSlots.Booties, Name = "Default Boots" };
-        Necklace = new Equipment { EquipmentType = EquipmentSlots.Necklace, Name = "Braided Necklace"};
-        Ring = new Equipment { EquipmentType = EquipmentSlots.Ring, Name = "Old Wedding Ring" };
-        Weapon = new Equipment { EquipmentType = EquipmentSlots.Weapon, Name = "Ye Old Dukes"};
+    public EquipmentSet()
+    {
+        // Default gear
+        _slots[EquipmentSlots.HeadPiece]  = new Equipment { EquipmentType = EquipmentSlots.HeadPiece,  Name = "Default Cap" };
+        _slots[EquipmentSlots.ChestPiece] = new Equipment { EquipmentType = EquipmentSlots.ChestPiece, Name = "Default Chestpiece" };
+        _slots[EquipmentSlots.Leggings]   = new Equipment { EquipmentType = EquipmentSlots.Leggings,   Name = "Default Leggings" };
+        _slots[EquipmentSlots.Booties]    = new Equipment { EquipmentType = EquipmentSlots.Booties,     Name = "Default Boots" };
+        _slots[EquipmentSlots.Necklace]   = new Equipment { EquipmentType = EquipmentSlots.Necklace,   Name = "Braided Necklace" };
+        _slots[EquipmentSlots.Ring]       = new Equipment { EquipmentType = EquipmentSlots.Ring,        Name = "Old Wedding Ring" };
+        _slots[EquipmentSlots.Weapon]     = new Equipment { EquipmentType = EquipmentSlots.Weapon,      Name = "Ye Old Dukes" };
     }
 
-    public Equipment Get (EquipmentSlots slot) => slot switch {
-        EquipmentSlots.HeadPiece => HeadPiece,  
-        EquipmentSlots.ChestPiece => ChestPiece,
-        EquipmentSlots.Leggings => Leggings,
-        EquipmentSlots.Booties => Booties,
+    public Equipment Get(EquipmentSlots slot) =>
+        _slots.TryGetValue(slot, out var item) ? item : null;
 
-        EquipmentSlots.Ring => Ring,
-
-        EquipmentSlots.Necklace => Necklace,
-        EquipmentSlots.Weapon => Weapon,
-        _ => null
-    };
-
-    public Equipment Equip(Equipment newItem) {
-        Equipment oldItem = Get(newItem.EquipmentType);
-
-        switch (oldItem.EquipmentType) {
-            case EquipmentSlots.HeadPiece: HeadPiece = newItem; break; 
-            case EquipmentSlots.ChestPiece: ChestPiece = newItem; break; 
-            case EquipmentSlots.Leggings: Leggings = newItem; break; 
-            case EquipmentSlots.Booties: Booties = newItem; break;
-
-            case EquipmentSlots.Ring: Ring = newItem; break;  
-
-            case EquipmentSlots.Necklace: Necklace = newItem; break;
-            case EquipmentSlots.Weapon: Weapon = newItem; break;
-        }
-
-        return oldItem;
+    public Equipment Equip(Equipment newItem)
+    {
+        var old = Get(newItem.EquipmentType);
+        _slots[newItem.EquipmentType] = newItem;
+        return old;
     }
 
-    public int TotalBonusHealth => 
-        (HeadPiece?.HealthBonus ?? 0) + (ChestPiece?.HealthBonus ?? 0) + (Leggings?.HealthBonus ?? 0) + (Booties?.HealthBonus ?? 0) +
-        (Ring?.HealthBonus ?? 0) + (Necklace?.HealthBonus ?? 0) + (Weapon?.HealthBonus ?? 0);
+    /// <summary>All currently equipped items (for iteration).</summary>
+    public IEnumerable<Equipment> AllItems => _slots.Values;
 
-    public int TotalBonusAttack => 
-        (HeadPiece?.AttackBonus ?? 0) + (ChestPiece?.AttackBonus ?? 0) + (Leggings?.AttackBonus ?? 0) + (Booties?.AttackBonus ?? 0) +
-        (Ring?.AttackBonus ?? 0) + (Necklace?.AttackBonus ?? 0) + (Weapon?.AttackBonus ?? 0);
+    // ── Total bonuses: one LINQ sum replaces 6 copy-pasted properties ──
+    private int Sum(Func<Equipment, int> selector) =>
+        _slots.Values.Sum(e => e != null ? selector(e) : 0);
 
-    public int TotalBonusMagic => 
-        (HeadPiece?.MagicBonus ?? 0) + (ChestPiece?.MagicBonus ?? 0) + (Leggings?.MagicBonus ?? 0) + (Booties?.MagicBonus ?? 0) +
-        (Ring?.MagicBonus ?? 0) + (Necklace?.MagicBonus ?? 0) + (Weapon?.MagicBonus ?? 0);
+    public int TotalBonusHealth     => Sum(e => e.HealthBonus);
+    public int TotalBonusAttack     => Sum(e => e.AttackBonus);
+    public int TotalBonusMagic      => Sum(e => e.MagicBonus);
+    public int TotalBonusDefense    => Sum(e => e.DefenseBonus);
+    public int TotalBonusProtection => Sum(e => e.ProtectionBonus);
+    public int TotalBonusSpeed      => Sum(e => e.SpeedBoost);
 
-    public int TotalBonusDefense => 
-        (HeadPiece?.DefenseBonus ?? 0) + (ChestPiece?.DefenseBonus ?? 0) + (Leggings?.DefenseBonus ?? 0) + (Booties?.DefenseBonus ?? 0) +
-        (Ring?.DefenseBonus ?? 0) + (Necklace?.DefenseBonus ?? 0) + (Weapon?.DefenseBonus ?? 0);
-
-    public int TotalBonusProtection => 
-        (HeadPiece?.ProtectionBonus ?? 0) + (ChestPiece?.ProtectionBonus ?? 0) + (Leggings?.ProtectionBonus ?? 0) + (Booties?.ProtectionBonus ?? 0) +
-        (Ring?.ProtectionBonus ?? 0) + (Necklace?.ProtectionBonus ?? 0) + (Weapon?.ProtectionBonus ?? 0);
-
-    public int TotalBonusSpeed => 
-        (HeadPiece?.SpeedBoost ?? 0) + (ChestPiece?.SpeedBoost ?? 0) + (Leggings?.SpeedBoost ?? 0) + (Booties?.SpeedBoost ?? 0) +
-        (Ring?.SpeedBoost ?? 0) + (Necklace?.SpeedBoost ?? 0) + (Weapon?.SpeedBoost ?? 0);
+    // ── Save/Load compatibility properties ──
+    // These let SaveSystem still access individual slots by name.
+    public Equipment HeadPiece  { get => Get(EquipmentSlots.HeadPiece);  set => _slots[EquipmentSlots.HeadPiece] = value; }
+    public Equipment ChestPiece { get => Get(EquipmentSlots.ChestPiece); set => _slots[EquipmentSlots.ChestPiece] = value; }
+    public Equipment Leggings   { get => Get(EquipmentSlots.Leggings);   set => _slots[EquipmentSlots.Leggings] = value; }
+    public Equipment Booties    { get => Get(EquipmentSlots.Booties);    set => _slots[EquipmentSlots.Booties] = value; }
+    public Equipment Ring       { get => Get(EquipmentSlots.Ring);       set => _slots[EquipmentSlots.Ring] = value; }
+    public Equipment Necklace   { get => Get(EquipmentSlots.Necklace);   set => _slots[EquipmentSlots.Necklace] = value; }
+    public Equipment Weapon     { get => Get(EquipmentSlots.Weapon);     set => _slots[EquipmentSlots.Weapon] = value; }
 }
