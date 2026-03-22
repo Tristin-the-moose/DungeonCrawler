@@ -3,6 +3,7 @@
 // ============================================================
 using System;
 using System.Collections.Generic;
+using DungeonCrawler;
 using DungeonCrawler.models;
 
 namespace DungeonCrawler.logic;
@@ -18,10 +19,6 @@ public enum BattleTurnState
 
 public class BattleSystem
 {
-    // ── Timing constants (were magic numbers) ──
-    private const float PreActionDelay = 0.6f;
-    private const float BetweenActionDelay = 0.8f;
-
     public Fighter Player { get; }
     public Fighter Enemy { get; }
     public BattleTurnState State { get; set; }
@@ -37,15 +34,16 @@ public class BattleSystem
         Player = player;
         Enemy = enemy;
         Depth = depth;
-        _rng = rng;   // shared RNG from GameContext — no more new Random() per battle
+        _rng = rng;
         State = BattleTurnState.PlayerChoosing;
         Log.Add($"A wild {enemy.Stats.Name} appears! (Depth {depth})");
     }
 
-    /// <summary>Player picks an action from the menu.</summary>
     public void SubmitPlayerAction(BattleActionType type)
     {
         if (State != BattleTurnState.PlayerChoosing) return;
+
+        var cfg = GameConfig.Instance;
 
         // Reset temporary defend buffs at the start of each turn
         Player.ResetBuffs();
@@ -59,18 +57,13 @@ public class BattleSystem
             Type = type, Source = Player, Target = playerTarget
         };
 
-        // Enemy auto-picks (70% attack, 30% magic)
-        var enemyType = _rng.Next(100) < 70
-            ? BattleActionType.Attack
-            : BattleActionType.Magic;
-
+        // Enemy always attacks (weapon type determines physical vs magic)
         var enemyAction = new BattleAction
         {
-            Type = enemyType, Source = Enemy, Target = Player
+            Type = BattleActionType.Attack, Source = Enemy, Target = Player
         };
 
-        // Enqueue in speed order directly — no list/reverse needed
-        // Both fighters use EffectiveSpeed so equipment bonuses apply to all
+        // Enqueue in speed order directly
         if (Enemy.EffectiveSpeed > Player.EffectiveSpeed)
         {
             _pendingActions.Enqueue(enemyAction);
@@ -83,10 +76,9 @@ public class BattleSystem
         }
 
         State = BattleTurnState.Animating;
-        _animTimer = PreActionDelay;
+        _animTimer = cfg.PreActionDelay;
     }
 
-    /// <summary>Called every frame during battle.</summary>
     public void Update(float dt)
     {
         Player.Update(dt);
@@ -97,7 +89,6 @@ public class BattleSystem
         _animTimer -= dt;
         if (_animTimer > 0f) return;
 
-        // Resolve next action
         if (_pendingActions.Count > 0)
         {
             var action = _pendingActions.Dequeue();
@@ -105,10 +96,9 @@ public class BattleSystem
             if (action.Source.Stats.IsAlive)
                 Log.Add(action.Execute(_rng));
 
-            _animTimer = BetweenActionDelay;
+            _animTimer = GameConfig.Instance.BetweenActionDelay;
         }
 
-        // Check end conditions after all actions resolve
         if (_pendingActions.Count == 0 && _animTimer <= 0f)
         {
             if (!Enemy.Stats.IsAlive)

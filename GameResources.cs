@@ -1,3 +1,6 @@
+// ============================================================
+// FILE: GameResources.cs — Centralized texture/font loading
+// ============================================================
 using System;
 using System.IO;
 using FontStashSharp;
@@ -36,7 +39,8 @@ public class GameResources : IDisposable
 
         // Placeholder sprites — replace with Content.Load<Texture2D>() when you have art
         PlayerSprite = MakePlaceholder(gd, 64, 96, Color.CornflowerBlue);
-        BattleBackground = MakePlaceholder(gd, Game1.ScreenW, Game1.ScreenH, new Color(30, 20, 40));
+        var cfg = GameConfig.Instance;
+        BattleBackground = MakePlaceholder(gd, cfg.ScreenWidth, cfg.ScreenHeight, new Color(30, 20, 40));
         EnemySprites = new[]
         {
             MakePlaceholder(gd, 56, 72, Color.LimeGreen),

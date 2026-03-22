@@ -13,13 +13,14 @@ public class VictoryScreen : IGameScreen
 {
     private readonly GameContext _ctx;
     private readonly Action<IGameScreen> _setScreen;
-    private readonly MenuSelector _menu = new(3);
+    private readonly MenuSelector _menu = new(4);
 
     private static readonly (string Label, Color Color)[] Options =
     {
-        ("Go Deeper", Color.White),
+        ("Go Deeper",   Color.White),
+        ("View Stats",  Color.MediumPurple),
         ("Save & Quit", Color.CornflowerBlue),
-        ("Cash Out", Color.Gray)
+        ("Cash Out",    Color.Gray)
     };
 
     public VictoryScreen(GameContext ctx, Action<IGameScreen> setScreen)
@@ -41,12 +42,16 @@ public class VictoryScreen : IGameScreen
                 _setScreen(new BattleScreen(_ctx, _setScreen));
                 break;
 
-            case 1: // Save & Quit
+            case 1: // View Stats — passes 'this' so StatsScreen can return here
+                _setScreen(new StatsScreen(_ctx, _setScreen, this));
+                break;
+
+            case 2: // Save & Quit
                 AdvanceAndSave();
                 _setScreen(new TitleScreen(_ctx, _setScreen));
                 break;
 
-            case 2: // Cash Out
+            case 3: // Cash Out
                 SaveSystem.Delete();
                 _setScreen(new FinalScoreScreen(_ctx, _setScreen));
                 break;

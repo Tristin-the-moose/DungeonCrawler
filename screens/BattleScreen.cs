@@ -2,12 +2,12 @@
 // FILE: screens/BattleScreen.cs — Battle gameplay screen
 // ============================================================
 using System;
+using FontStashSharp;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using DungeonCrawler.models;
 using DungeonCrawler.logic;
 using DungeonCrawler.utils;
-using FontStashSharp;
 
 namespace DungeonCrawler.screens;
 
@@ -18,17 +18,20 @@ public class BattleScreen : IGameScreen
     private readonly BattleSystem _battle;
     private readonly MenuSelector _menu;
 
-    private static readonly BattleActionType[] Actions =
+    // Menu options: 3 battle actions + View Stats
+    private enum MenuOption { Attack, Defend, Heal, Stats }
+
+    private static readonly MenuOption[] Options =
     {
-        BattleActionType.Attack, BattleActionType.Magic,
-        BattleActionType.Defend, BattleActionType.Heal
+        MenuOption.Attack, MenuOption.Defend,
+        MenuOption.Heal, MenuOption.Stats
     };
 
     public BattleScreen(GameContext ctx, Action<IGameScreen> setScreen)
     {
         _ctx = ctx;
         _setScreen = setScreen;
-        _menu = new MenuSelector(Actions.Length);
+        _menu = new MenuSelector(Options.Length);
 
         // Create enemy and position fighters
         var res = Game1.Resources;
@@ -50,8 +53,25 @@ public class BattleScreen : IGameScreen
         if (_battle.State == BattleTurnState.PlayerChoosing)
         {
             _menu.Update();
+
             if (_menu.Confirmed)
-                _battle.SubmitPlayerAction(Actions[_menu.Index]);
+            {
+                switch (Options[_menu.Index])
+                {
+                    case MenuOption.Attack:
+                        _battle.SubmitPlayerAction(BattleActionType.Attack);
+                        break;
+                    case MenuOption.Defend:
+                        _battle.SubmitPlayerAction(BattleActionType.Defend);
+                        break;
+                    case MenuOption.Heal:
+                        _battle.SubmitPlayerAction(BattleActionType.Heal);
+                        break;
+                    case MenuOption.Stats:
+                        _setScreen(new StatsScreen(_ctx, _setScreen, this));
+                        break;
+                }
+            }
         }
 
         // Transition on battle end
@@ -92,15 +112,19 @@ public class BattleScreen : IGameScreen
 
     private void DrawActionMenu(SpriteBatch sb)
     {
-        int x = 40, y = Game1.ScreenH - 140;
-        DrawHelpers.DrawRect(sb, x - 10, y - 10, 200, 130, Color.Black * 0.8f);
+        int x = 40, y = Game1.ScreenH - 170;
+        DrawHelpers.DrawRect(sb, x - 10, y - 10, 200, 160, Color.Black * 0.8f);
 
-        for (int i = 0; i < Actions.Length; i++)
+        for (int i = 0; i < Options.Length; i++)
         {
             bool selected = i == _menu.Index;
             string prefix = selected ? "> " : "  ";
-            Color c = selected ? Color.Yellow : Color.White;
-            sb.DrawString(Game1.Resources.Font, prefix + Actions[i],
+
+            // Stats option gets a different color to distinguish it from actions
+            Color baseColor = Options[i] == MenuOption.Stats ? Color.MediumPurple : Color.White;
+            Color c = selected ? Color.Yellow : baseColor;
+
+            sb.DrawString(Game1.Resources.Font, prefix + Options[i],
                 new Vector2(x, y + i * 28), c);
         }
     }

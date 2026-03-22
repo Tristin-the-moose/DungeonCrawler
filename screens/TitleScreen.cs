@@ -25,14 +25,16 @@ public class TitleScreen : IGameScreen
         // Build menu options dynamically based on save state
         if (SaveSystem.HasSave())
         {
-            _options.Add(("New Game", Color.White, StartNewGame));
-            _options.Add(("Continue", Color.LimeGreen, ContinueGame));
-            _options.Add(("Exit", Color.Gray, () => Environment.Exit(0)));
+            _options.Add(("New Game",  Color.White,        StartNewGame));
+            _options.Add(("Continue",  Color.LimeGreen,    ContinueGame));
+            _options.Add(("Settings",  Color.MediumPurple, OpenSettings));
+            _options.Add(("Exit",      Color.Gray,         () => Environment.Exit(0)));
         }
         else
         {
-            _options.Add(("Start Game", Color.White, StartNewGame));
-            _options.Add(("Exit", Color.Gray, () => Environment.Exit(0)));
+            _options.Add(("Start Game", Color.White,        StartNewGame));
+            _options.Add(("Settings",   Color.MediumPurple, OpenSettings));
+            _options.Add(("Exit",       Color.Gray,         () => Environment.Exit(0)));
         }
 
         _menu = new MenuSelector(_options.Count);
@@ -81,6 +83,11 @@ public class TitleScreen : IGameScreen
             };
         }
         StartBattle();
+    }
+
+    private void OpenSettings()
+    {
+        _setScreen(new ConfigScreen(_setScreen, new TitleScreen(_ctx, _setScreen)));
     }
 
     private void StartBattle()

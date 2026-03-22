@@ -12,6 +12,16 @@ public enum EquipmentSlots
     HeadPiece, ChestPiece, Leggings, Booties, Weapon, Ring, Necklace
 }
 
+public enum WeaponType
+{
+    Sword,   // ATK focused
+    Dagger,  // ATK + SPD
+    Staff,   // MAG focused
+    Wand,    // MAG + SPD
+    Mace     // ATK + DEF
+}
+
+
 public class Equipment
 {
     public string Name { get; set; } = "Unknown";
@@ -23,6 +33,10 @@ public class Equipment
     public int ProtectionBonus { get; set; }
     public int SpeedBoost { get; set; }
     public int Rarity { get; set; }
+    public WeaponType? Weapon { get; set; }  // Only set for weapon-slot items
+
+    /// <summary>Whether this weapon uses magic for its attack.</summary>
+    public bool IsMagicWeapon => Weapon is WeaponType.Staff or WeaponType.Wand;
 
     /// <summary>Total of all stat bonuses on this item.</summary>
     public int TotalStats => HealthBonus + AttackBonus + MagicBonus
@@ -57,7 +71,7 @@ public class EquipmentSet
         _slots[EquipmentSlots.Booties]    = new Equipment { EquipmentType = EquipmentSlots.Booties,     Name = "Default Boots" };
         _slots[EquipmentSlots.Necklace]   = new Equipment { EquipmentType = EquipmentSlots.Necklace,   Name = "Braided Necklace" };
         _slots[EquipmentSlots.Ring]       = new Equipment { EquipmentType = EquipmentSlots.Ring,        Name = "Old Wedding Ring" };
-        _slots[EquipmentSlots.Weapon]     = new Equipment { EquipmentType = EquipmentSlots.Weapon,      Name = "Ye Old Dukes" };
+        _slots[EquipmentSlots.Weapon]     = new Equipment { EquipmentType = EquipmentSlots.Weapon,      Name = "Ye Old Dukes", Weapon = WeaponType.Sword };
     }
 
     public Equipment Get(EquipmentSlots slot) =>

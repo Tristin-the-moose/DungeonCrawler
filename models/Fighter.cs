@@ -1,6 +1,7 @@
 // ============================================================
 // FILE: models/Fighter.cs — A combatant (player or enemy)
 // ============================================================
+using DungeonCrawler;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -20,26 +21,23 @@ public class Fighter
     public int DefendBuff { get; set; }
 
     // ── Effective stats (base + gear + temp buffs) ──
-    // All fighters use the same formula — enemies have null Equipment
-    // which falls through to 0 via the null-coalescing operator.
     public int EffectiveAttack    => Stats.Attack  + (Equipment?.TotalBonusAttack ?? 0);
     public int EffectiveMagic     => Stats.Magic   + (Equipment?.TotalBonusMagic ?? 0);
     public int EffectiveDefense   => Stats.Defense + (Equipment?.TotalBonusDefense ?? 0) + DefendBuff;
     public int EffectiveSpeed     => Stats.Speed   + (Equipment?.TotalBonusSpeed ?? 0);
     public int EffectiveMaxHealth => Stats.MaxHp   + (Equipment?.TotalBonusHealth ?? 0);
-
-    // BUG FIX: Original had EffectiveProtection using Stats.Defense.
-    // Now correctly uses ProtectionBonus as its own stat category, plus defend buff.
     public int EffectiveProtection => (Equipment?.TotalBonusProtection ?? 0) + DefendBuff;
 
     public void ResetBuffs() => DefendBuff = 0;
 
+    /// <summary>Whether this fighter's weapon deals magic damage.</summary>
+    public bool UsesMagicAttack => Equipment?.Weapon?.IsMagicWeapon ?? false;
+
     // ── Hit flash ──
-    private const float FlashDuration = 0.3f;
     public float FlashTimer { get; set; }
     public bool IsFlashing => FlashTimer > 0f;
 
-    public void TriggerFlash() => FlashTimer = FlashDuration;
+    public void TriggerFlash() => FlashTimer = GameConfig.Instance.FlashDuration;
 
     public Fighter(Stats stats, bool isPlayer)
     {

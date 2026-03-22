@@ -7,6 +7,7 @@ using FontStashSharp;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using DungeonCrawler;
 using DungeonCrawler.models;
 using DungeonCrawler.logic;
 using DungeonCrawler.screens;
@@ -27,16 +28,22 @@ public class Game1 : Game
     private IGameScreen _currentScreen;
     private GameContext _context;
 
-    // ── Screen Constants ──
-    public const int ScreenW = 960;
-    public const int ScreenH = 540;
+    // ── Screen dimensions (read from config) ──
+    public static int ScreenW { get; private set; }
+    public static int ScreenH { get; private set; }
 
     public Game1()
     {
+        var cfg = GameConfig.Instance;
+        ScreenW = cfg.ScreenWidth;
+        ScreenH = cfg.ScreenHeight;
+
         _graphics = new GraphicsDeviceManager(this)
         {
             PreferredBackBufferWidth = ScreenW,
-            PreferredBackBufferHeight = ScreenH
+            PreferredBackBufferHeight = ScreenH,
+            IsFullScreen = cfg.Fullscreen,
+            SynchronizeWithVerticalRetrace = cfg.VSync
         };
         Content.RootDirectory = "Content";
         IsMouseVisible = true;
@@ -88,6 +95,7 @@ public class Game1 : Game
     protected override void UnloadContent()
     {
         Resources?.Dispose();
+        GameLogger.Shutdown();
         base.UnloadContent();
     }
 }
