@@ -10,7 +10,7 @@ set "MM=%date:~4,2%"
 set "DD=%date:~7,2%"
 
 set ZIP_NAME=DungeonCrawler%YYYY%-%MM%-%DD%.zip
-set ZIP_OUTPUT=%USERPROFILE%\Desktop\GAMEBUILDS\%ZIP_NAME%
+set ZIP_OUTPUT=%USERPROFILE%\Downloads\%ZIP_NAME%
 
 :: ── Clean old build ──
 echo [1/5] Cleaning old publish...
