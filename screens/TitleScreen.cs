@@ -25,8 +25,8 @@ public class TitleScreen : IGameScreen
         // Build menu options dynamically based on save state
         if (SaveSystem.HasSave())
         {
-            _options.Add(("New Game",  Color.White,        StartNewGame));
             _options.Add(("Continue",  Color.LimeGreen,    ContinueGame));
+            _options.Add(("New Game",  Color.White,        StartNewGame));
             _options.Add(("Settings",  Color.MediumPurple, OpenSettings));
             _options.Add(("Exit",      Color.Gray,         () => Environment.Exit(0)));
         }

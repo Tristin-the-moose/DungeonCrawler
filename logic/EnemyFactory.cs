@@ -20,7 +20,14 @@ public static class EnemyFactory
     {
         var cfg = GameConfig.Instance;
         int tier = Math.Min(depth, Names.Length - 1);
-        float mult = 1f + depth * cfg.EnemyScalePerDepth;
+
+        // Exponential scaling: mult = 1 + multiplier * depth^exponent
+        // This curves upward to match the exponential loot progression
+        float mult = 1f + cfg.EnemyScaleMultiplier * MathF.Pow(depth, cfg.EnemyScaleExponent);
+
+        // Add slight randomness (±10%) so same-depth enemies feel different
+        float variance = 0.9f + (float)rng.NextDouble() * 0.2f;
+        mult *= variance;
 
         var stats = new Stats
         {

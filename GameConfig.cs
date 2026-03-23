@@ -48,9 +48,13 @@ public class GameConfig
     public float DefendBlockPercent { get; set; } = 0.40f;   // block 40% of incoming damage
     public float DefendCounterMultiplier { get; set; } = 0.5f; // counter for 50% of normal attack
     public int HealBase { get; set; } = 10;
+    public float HealPercent { get; set; } = 0.50f;         // heals 50% of max HP
+    public float MinHealPercent_Combat { get; set; } = 0.25f; // never heals below 25% of max HP
+    public int HealCooldownTurns { get; set; } = 3;          // turns before heal is available again
     public float DamageVariance { get; set; } = 0.15f;
-    public int CritChance { get; set; } = 10;          // % chance to crit
-    public float CritMultiplier { get; set; } = 1.75f;  // damage multiplier on crit
+    public int CritChance { get; set; } = 5;              // base % chance to crit
+    public float CritMultiplier { get; set; } = 1.75f;    // damage multiplier on crit
+    public float SpeedCritBonus { get; set; } = 1.5f;     // extra crit % per point of speed advantage
     public float PreActionDelay { get; set; } = 0.6f;
     public float BetweenActionDelay { get; set; } = 0.8f;
     public int EnemyAttackChance { get; set; } = 70;   // % chance enemy picks Attack vs Magic
@@ -64,15 +68,18 @@ public class GameConfig
     public int EnemyBaseDefense { get; set; } = 3;
     public int EnemyBaseSpeed { get; set; } = 5;
     public int EnemyBaseMagic { get; set; } = 4;
-    public float EnemyScalePerDepth { get; set; } = 0.25f;
+    public float EnemyScaleExponent { get; set; } = 1.6f;     // exponential curve to match loot
+    public float EnemyScaleMultiplier { get; set; } = 0.3f;   // multiplied by depth^exponent
 
     // ════════════════════════════════════════════
     //  PROGRESSION
     // ════════════════════════════════════════════
     public int ScorePerDepth { get; set; } = 100;
-    public float HealPercentBetweenFloors { get; set; } = 0.25f;
-    public int MaxHpBoostPerFloor { get; set; } = 2;
-    public int AttackBoostPerFloor { get; set; } = 1;
+    public float HealPercentBetweenFloors { get; set; } = 0.35f;
+    public float HealDecayPerFloor { get; set; } = 0.015f;    // heal% drops by this each floor
+    public float MinHealPercent { get; set; } = 0.10f;        // floor for heal%, never below this
+    public int MaxHpBoostPerFloor { get; set; } = 1;
+    public int AttackBoostPerFloor { get; set; } = 0;          // removed flat ATK — gear handles it now
 
     // ════════════════════════════════════════════
     //  LOOT
@@ -84,8 +91,8 @@ public class GameConfig
     public int LootStatPerTier { get; set; } = 2;     // baseVal = LootBaseStatValue + tier * this
     public int CursedLootChance { get; set; } = 15;    // % chance an item is cursed (high stat + penalty)
     public int MaxRerollAttempts { get; set; } = 20;   // max re-rolls to guarantee an upgrade
-    public float LootScaleMultiplier { get; set; } = 2.5f;
     public float LootScaleExponent { get; set; } = 1.8f;
+    public float LootScaleMultiplier { get; set; } = 2.5f;
 
     // ════════════════════════════════════════════
     //  LOAD / SAVE / GENERATE

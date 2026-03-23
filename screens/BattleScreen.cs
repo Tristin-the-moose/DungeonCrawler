@@ -119,11 +119,22 @@ public class BattleScreen : IGameScreen
             bool selected = i == _menu.Index;
             string prefix = selected ? "> " : "  ";
 
-            // Stats option gets a different color to distinguish it from actions
-            Color baseColor = Options[i] == MenuOption.Stats ? Color.MediumPurple : Color.White;
-            Color c = selected ? Color.Yellow : baseColor;
+            string label = Options[i].ToString();
+            Color baseColor = Color.White;
 
-            sb.DrawString(Game1.Resources.Font, prefix + Options[i],
+            // Show cooldown on Heal option
+            if (Options[i] == MenuOption.Heal && !_ctx.Player.CanHeal)
+            {
+                label = $"Heal ({_ctx.Player.HealCooldown})";
+                baseColor = Color.DarkGray;
+            }
+
+            // Stats option gets a different color
+            if (Options[i] == MenuOption.Stats)
+                baseColor = Color.MediumPurple;
+
+            Color c = selected ? Color.Yellow : baseColor;
+            sb.DrawString(Game1.Resources.Font, prefix + label,
                 new Vector2(x, y + i * 28), c);
         }
     }

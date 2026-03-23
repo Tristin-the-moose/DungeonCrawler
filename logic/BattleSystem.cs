@@ -45,9 +45,11 @@ public class BattleSystem
 
         var cfg = GameConfig.Instance;
 
-        // Reset temporary defend buffs at the start of each turn
+        // Reset temporary defend buffs and tick cooldowns
         Player.ResetBuffs();
         Enemy.ResetBuffs();
+        Player.TickCooldowns();
+        Enemy.TickCooldowns();
 
         var playerTarget = type is BattleActionType.Defend or BattleActionType.Heal
             ? Player : Enemy;
@@ -57,22 +59,36 @@ public class BattleSystem
             Type = type, Source = Player, Target = playerTarget
         };
 
-        // Enemy always attacks (weapon type determines physical vs magic)
+        // Enemy always attacks
         var enemyAction = new BattleAction
         {
             Type = BattleActionType.Attack, Source = Enemy, Target = Player
         };
 
-        // Enqueue in speed order directly
-        if (Enemy.EffectiveSpeed > Player.EffectiveSpeed)
+        // Defend applies immediately — it's a stance, not a timed action.
+        // This ensures it works regardless of speed/turn order.
+        if (type == BattleActionType.Defend)
         {
+            string[] defendMsgs = playerAction.Execute(_rng);
+            foreach (var msg in defendMsgs)
+                Log.Add(msg);
+
+            // Only queue the enemy action since defend already resolved
             _pendingActions.Enqueue(enemyAction);
-            _pendingActions.Enqueue(playerAction);
         }
         else
         {
-            _pendingActions.Enqueue(playerAction);
-            _pendingActions.Enqueue(enemyAction);
+            // Normal turn order based on speed
+            if (Enemy.EffectiveSpeed > Player.EffectiveSpeed)
+            {
+                _pendingActions.Enqueue(enemyAction);
+                _pendingActions.Enqueue(playerAction);
+            }
+            else
+            {
+                _pendingActions.Enqueue(playerAction);
+                _pendingActions.Enqueue(enemyAction);
+            }
         }
 
         State = BattleTurnState.Animating;

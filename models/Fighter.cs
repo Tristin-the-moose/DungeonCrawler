@@ -21,6 +21,10 @@ public class Fighter
     public int DefendBuff { get; set; }
     public bool IsDefending { get; set; }
 
+    // ── Heal cooldown ──
+    public int HealCooldown { get; set; }
+    public bool CanHeal => HealCooldown <= 0;
+
     // ── Effective stats (base + gear + temp buffs) ──
     public int EffectiveAttack    => Stats.Attack  + (Equipment?.TotalBonusAttack ?? 0);
     public int EffectiveMagic     => Stats.Magic   + (Equipment?.TotalBonusMagic ?? 0);
@@ -33,6 +37,13 @@ public class Fighter
     {
         DefendBuff = 0;
         IsDefending = false;
+    }
+
+    /// <summary>Tick cooldowns at the start of each turn.</summary>
+    public void TickCooldowns()
+    {
+        if (HealCooldown > 0)
+            HealCooldown--;
     }
 
     /// <summary>Whether this fighter's weapon deals magic damage.</summary>

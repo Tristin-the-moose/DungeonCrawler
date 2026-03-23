@@ -20,9 +20,6 @@ public class BattleAction
     public Fighter Source { get; set; }
     public Fighter Target { get; set; }
 
-    /// <summary>
-    /// Execute the action. Returns one or more log messages.
-    /// </summary>
     public string[] Execute(Random rng)
     {
         return Type switch
@@ -44,16 +41,16 @@ public class BattleAction
         {
             atk = Source.EffectiveMagic;
             def = Target.EffectiveProtection;
-            verb = "casts a spell for";
+            verb = "casts a spell on";
         }
         else
         {
             atk = Source.EffectiveAttack;
             def = Target.EffectiveDefense;
-            verb = "attacks for";
+            verb = "attacks";
         }
 
-        var (dealt, isCrit) = CalculateDamage(atk, def, rng);
+        var (dealt, isCrit) = CalculateDamage(atk, def, Source, Target, rng);
 
         // If target is defending, reduce damage and trigger counter-attack
         if (Target.IsDefending)
@@ -67,7 +64,7 @@ public class BattleAction
             string critTag = isCrit ? " CRITICAL HIT!" : "";
             string attackMsg = $"{Source.Stats.Name} {verb} {Target.Stats.Name}!{critTag} (blocked)";
 
-            // Counter-attack
+            // Counter-attack (uses defender's speed for crit calc)
             int counterAtk = Target.UsesMagicAttack ? Target.EffectiveMagic : Target.EffectiveAttack;
             int counterDef = Source.UsesMagicAttack ? Source.EffectiveProtection : Source.EffectiveDefense;
             int counterRaw = Math.Max(cfg.MinDamage, counterAtk - counterDef);
@@ -82,7 +79,7 @@ public class BattleAction
             return new[] { attackMsg, counterMsg };
         }
 
-        // Normal attack (no defend active)
+        // Normal attack
         Target.Stats.TakeDamage(dealt);
         Target.TriggerFlash();
 
@@ -95,27 +92,46 @@ public class BattleAction
         var cfg = GameConfig.Instance;
         Source.DefendBuff += cfg.DefendBoost;
         Source.IsDefending = true;
-
         return new[] { $"{Source.Stats.Name} takes a defensive stance!" };
     }
 
     private string ExecuteHeal()
     {
         var cfg = GameConfig.Instance;
-        int heal = cfg.HealBase + Source.Stats.Magic;
+
+        if (!Source.CanHeal)
+            return $"{Source.Stats.Name} tries to heal but it's not ready! ({Source.HealCooldown} turns)";
+
+        // Heal scales with max HP — starts at 50%, minimum 25%
+        float healPct = Math.Max(cfg.MinHealPercent_Combat, cfg.HealPercent);
+        int heal = cfg.HealBase + (int)(Source.Stats.MaxHp * healPct);
         Source.Stats.Heal(heal);
+
+        // Start cooldown
+        Source.HealCooldown = cfg.HealCooldownTurns;
+
         return $"{Source.Stats.Name} heals!";
     }
 
-    private static (int damage, bool isCrit) CalculateDamage(int atk, int def, Random rng)
+    /// <summary>
+    /// Damage formula with variance and speed-based crit chance.
+    /// Crit% = BaseCrit + SpeedCritBonus * max(0, attackerSpeed - defenderSpeed)
+    /// </summary>
+    private static (int damage, bool isCrit) CalculateDamage(
+        int atk, int def, Fighter source, Fighter target, Random rng)
     {
         var cfg = GameConfig.Instance;
         int raw = Math.Max(cfg.MinDamage, atk - def);
 
+        // Variance roll
         float roll = 1f + (float)(rng.NextDouble() * 2 - 1) * cfg.DamageVariance;
         int damage = Math.Max(cfg.MinDamage, (int)(raw * roll));
 
-        bool isCrit = rng.Next(100) < cfg.CritChance;
+        // Crit chance scales with speed advantage
+        int speedDiff = Math.Max(0, source.EffectiveSpeed - target.EffectiveSpeed);
+        float critChance = cfg.CritChance + speedDiff * cfg.SpeedCritBonus;
+        bool isCrit = rng.Next(100) < (int)critChance;
+
         if (isCrit)
             damage = (int)(damage * cfg.CritMultiplier);
 
