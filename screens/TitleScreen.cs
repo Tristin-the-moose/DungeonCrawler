@@ -80,7 +80,8 @@ public class TitleScreen : IGameScreen
             {
                 CurrentDepth = save.CurrentDepth,
                 TotalKills   = save.TotalKills,
-                Score        = save.Score
+                Score        = save.Score,
+                Gold         = save.Gold
             };
 
             // Restore the saved map if present, otherwise generate a fresh one

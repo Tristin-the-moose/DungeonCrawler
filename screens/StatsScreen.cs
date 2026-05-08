@@ -5,6 +5,7 @@ using System;
 using FontStashSharp;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 using DungeonCrawler.models;
 using DungeonCrawler.utils;
 
@@ -15,7 +16,14 @@ public class StatsScreen : IGameScreen
     private readonly GameContext _ctx;
     private readonly Action<IGameScreen> _setScreen;
     private readonly IGameScreen _returnScreen;
-    private readonly MenuSelector _menu = new(1); // just listening for Enter/Escape
+    private readonly KeyboardWatcher _kb = new();
+
+    // Once the player presses an exit key we wait for it (and any other exit
+    // key) to release before actually transitioning. Without this, the parent
+    // screen — whose KeyboardWatcher snapshot is stale from when StatsScreen
+    // was opened — would see the still-held key as a freshly-pressed event
+    // (e.g. Esc → save & quit, Enter → enter the cursor's room).
+    private bool _exitArmed;
 
     public StatsScreen(GameContext ctx, Action<IGameScreen> setScreen, IGameScreen returnScreen)
     {
@@ -26,10 +34,26 @@ public class StatsScreen : IGameScreen
 
     public void Update(float dt)
     {
-        _menu.Update();
+        _kb.Update();
 
-        if (_menu.Confirmed || _menu.WasPressed(Microsoft.Xna.Framework.Input.Keys.Escape))
+        // Arm the exit on press of any back/confirm key.
+        if (!_exitArmed && (
+                _kb.WasPressed(Keys.Enter)  ||
+                _kb.WasPressed(Keys.Space)  ||
+                _kb.WasPressed(Keys.Escape)))
+        {
+            _exitArmed = true;
+        }
+
+        // Only transition once those keys are all up — that way the parent
+        // screen's WasPressed() check on the same key reads as false.
+        if (_exitArmed
+            && !_kb.IsDown(Keys.Enter)
+            && !_kb.IsDown(Keys.Space)
+            && !_kb.IsDown(Keys.Escape))
+        {
             _setScreen(_returnScreen);
+        }
     }
 
     public void Draw(SpriteBatch sb)
@@ -49,17 +73,16 @@ public class StatsScreen : IGameScreen
         sb.DrawString(font, "BASE STATS", new Vector2(sx, sy), Color.Yellow);
         sy += 30;
 
-        DrawStatLine(sb, sx, ref sy, "HP",      stats.Hp, stats.MaxHp, player.EffectiveMaxHealth, Color.LimeGreen);
-        DrawStatLine(sb, sx, ref sy, "Attack",  stats.Attack,  player.EffectiveAttack,  Color.OrangeRed);
-        DrawStatLine(sb, sx, ref sy, "Defense", stats.Defense, player.EffectiveDefense, Color.CornflowerBlue);
-        DrawStatLine(sb, sx, ref sy, "Magic",   stats.Magic,   player.EffectiveMagic,   Color.MediumPurple);
-        DrawStatLine(sb, sx, ref sy, "Speed",   stats.Speed,   player.EffectiveSpeed,   Color.Yellow);
+        DrawStatLine(sb, sx, ref sy, "HP",         stats.Hp, stats.MaxHp, player.EffectiveMaxHealth, Color.LimeGreen);
+        DrawStatLine(sb, sx, ref sy, "Attack",     stats.Attack,     player.EffectiveAttack,     Color.OrangeRed);
+        DrawStatLine(sb, sx, ref sy, "Defense",    stats.Defense,    player.EffectiveDefense,    Color.CornflowerBlue);
+        DrawStatLine(sb, sx, ref sy, "Magic",      stats.Magic,      player.EffectiveMagic,      Color.MediumPurple);
+        DrawStatLine(sb, sx, ref sy, "Protection", stats.Protection, player.EffectiveProtection, Color.SkyBlue);
+        DrawStatLine(sb, sx, ref sy, "Speed",      stats.Speed,      player.EffectiveSpeed,      Color.Yellow);
 
         sy += 10;
         string atkType = player.UsesMagicAttack ? "Magic" : "Physical";
         sb.DrawString(font, $"Attack Type: {atkType}", new Vector2(sx, sy), Color.White);
-        sy += 26;
-        sb.DrawString(font, $"Protection: {player.EffectiveProtection}", new Vector2(sx, sy), Color.Gray);
         sy += 26;
         sb.DrawString(font, $"Kills: {_ctx.Depth.TotalKills}   Score: {_ctx.Depth.Score}", new Vector2(sx, sy), Color.White);
 

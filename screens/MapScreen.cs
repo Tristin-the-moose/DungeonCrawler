@@ -45,6 +45,7 @@ public class MapScreen : IGameScreen
         ("BOSS",    new Color(220,  50,  50)),
         ("CHEST",   new Color(255, 210,  40)),
         ("REST",    new Color(60,  200,  80)),
+        ("SHOP",    new Color(120, 180, 255)),
         ("EXIT",    new Color(80,  220, 220)),
     };
     private static float[]         _legendWidths;
@@ -184,6 +185,11 @@ public class MapScreen : IGameScreen
                 _setScreen(new RestScreen(_ctx, _setScreen,
                     returnTo: new MapScreen(_ctx, _setScreen)));
                 break;
+
+            case RoomType.Shop:
+                _setScreen(new ShopScreen(_ctx, _setScreen,
+                    returnTo: new MapScreen(_ctx, _setScreen)));
+                break;
         }
     }
 
@@ -217,6 +223,10 @@ public class MapScreen : IGameScreen
         string score = $"Score: {_ctx.Depth.Score}";
         sb.DrawString(Game1.Resources.Font, score,
             new Vector2(14, 18), Color.Gray);
+
+        string gold = $"Gold: {_ctx.Depth.Gold}";
+        sb.DrawString(Game1.Resources.Font, gold,
+            new Vector2(14, 44), new Color(255, 215, 0));
     }
 
     private void DrawGrid(SpriteBatch sb)

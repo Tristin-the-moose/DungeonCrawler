@@ -35,7 +35,8 @@ public class GameConfig
     public string DefaultPlayerName { get; set; } = "Hero";
     public int StartingMaxHp { get; set; } = 100;
     public int StartingAttack { get; set; } = 12;
-    public int StartingDefense { get; set; } = 5;
+    public int StartingDefense { get; set; } = 5;     // physical damage mitigation
+    public int StartingProtection { get; set; } = 3;  // magic damage mitigation
     public int StartingSpeed { get; set; } = 7;
     public int StartingMagic { get; set; } = 8;
     public bool StartWithMagicWeapon { get; set; } = false; // false = Sword, true = Staff
@@ -43,7 +44,8 @@ public class GameConfig
     // ════════════════════════════════════════════
     //  COMBAT
     // ════════════════════════════════════════════
-    public int MinDamage { get; set; } = 1;
+    public int MinDamage { get; set; } = 1;       // damage floor at depth 1
+    public int MinDamagePerDepth { get; set; } = 1; // added per depth beyond 1
     public int DefendBoost { get; set; } = 3;
     public float DefendBlockPercent { get; set; } = 0.40f;   // block 40% of incoming damage
     public float DefendCounterMultiplier { get; set; } = 0.5f; // counter for 50% of normal attack
@@ -63,10 +65,11 @@ public class GameConfig
     public int EnemyBaseHp { get; set; } = 30;
     public int EnemyBaseAttack { get; set; } = 8;
     public int EnemyBaseDefense { get; set; } = 3;
+    public int EnemyBaseProtection { get; set; } = 2;
     public int EnemyBaseSpeed { get; set; } = 5;
     public int EnemyBaseMagic { get; set; } = 4;
     public float EnemyScaleExponent { get; set; } = 1.6f;     // exponential curve to match loot
-    public float EnemyScaleMultiplier { get; set; } = 0.3f;   // multiplied by depth^exponent
+    public float EnemyScaleMultiplier { get; set; } = 0.4f;   // multiplied by depth^exponent
 
     // ════════════════════════════════════════════
     //  PROGRESSION
@@ -118,6 +121,51 @@ public class GameConfig
     // (A natural yellow roll still wins — this only raises the floor.)
     public int TreasurePurpleBaseChance { get; set; } = 20;  // % chance at depth 0
     public int TreasurePurpleDepthBonus { get; set; } = 5;   // additional % per depth
+
+    // ════════════════════════════════════════════
+    //  ECONOMY
+    // ════════════════════════════════════════════
+    public int StartingGold { get; set; } = 0;
+
+    // Battle drops: BattleGoldBase * BattleGoldDepthScale^(depth-1) * roomTypeMult ± variance
+    public int   BattleGoldBase           { get; set; } = 8;
+    public float BattleGoldDepthScale     { get; set; } = 1.25f;
+    public float EliteGoldMultiplier      { get; set; } = 2.5f;
+    public float BossGoldMultiplier       { get; set; } = 5.0f;
+    public float GoldDropVariance         { get; set; } = 0.20f;   // ±20%
+
+    // Treasure-room gold drop (in addition to the equipment roll)
+    public int   TreasureGoldBase         { get; set; } = 25;
+    public float TreasureGoldDepthScale   { get; set; } = 1.4f;
+
+    // Shop offers (stat upgrades)
+    public int   ShopUpgradeOfferCount    { get; set; } = 3;
+    public int   ShopUpgradeBasePrice     { get; set; } = 40;
+    public float ShopUpgradePriceScale    { get; set; } = 1.35f;   // per depth
+
+    // Stat upgrade magnitudes — applied to the player's BASE stats permanently
+    public int   ShopUpgradeMaxHp         { get; set; } = 8;
+    public int   ShopUpgradeAttack        { get; set; } = 2;
+    public int   ShopUpgradeDefense       { get; set; } = 2;
+    public int   ShopUpgradeProtection    { get; set; } = 2;
+    public int   ShopUpgradeSpeed         { get; set; } = 1;
+    public int   ShopUpgradeMagic         { get; set; } = 2;
+
+    // Shop reroll — cost grows by ShopRerollPriceIncrement per use, resets per visit
+    public int   ShopRerollBasePrice      { get; set; } = 15;
+    public int   ShopRerollPriceIncrement { get; set; } = 10;
+
+    // ════════════════════════════════════════════
+    //  HELPERS
+    // ════════════════════════════════════════════
+
+    /// <summary>
+    /// Damage floor for a given depth. Linear: MinDamage at depth 1, plus
+    /// MinDamagePerDepth for every depth above 1. Used so a tank build
+    /// can't trivialize late floors via the chip-damage minimum.
+    /// </summary>
+    public int MinDamageAt(int depth)
+        => MinDamage + System.Math.Max(0, depth - 1) * MinDamagePerDepth;
 
     // ════════════════════════════════════════════
     //  LOAD / SAVE / GENERATE

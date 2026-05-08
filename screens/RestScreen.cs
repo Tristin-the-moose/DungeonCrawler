@@ -4,6 +4,7 @@
 using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 using DungeonCrawler.utils;
 
 namespace DungeonCrawler.screens;
@@ -16,6 +17,10 @@ public class RestScreen : IGameScreen
     private readonly int                  _healAmount;
     private readonly MenuSelector         _input = new(1);
     private bool                          _healed;
+
+    // Wait for the confirm key to release before returning to the map, so the
+    // map screen doesn't see the same Enter as a fresh "enter cursor's room".
+    private bool _exitArmed;
 
     public RestScreen(GameContext ctx, Action<IGameScreen> setScreen, IGameScreen returnTo)
     {
@@ -39,8 +44,16 @@ public class RestScreen : IGameScreen
         }
 
         _input.Update();
+
+        if (_exitArmed)
+        {
+            if (!_input.IsDown(Keys.Enter) && !_input.IsDown(Keys.Space))
+                _setScreen(_returnTo);
+            return;
+        }
+
         if (_input.Confirmed)
-            _setScreen(_returnTo);
+            _exitArmed = true;
     }
 
     public void Draw(SpriteBatch sb)

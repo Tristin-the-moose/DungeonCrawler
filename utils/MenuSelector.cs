@@ -91,6 +91,9 @@ public class MenuSelector
     public bool WasPressed(Keys key)
         => _curKb.IsKeyDown(key) && _prevKb.IsKeyUp(key);
 
+    /// <summary>True while <paramref name="key"/> is currently held down.</summary>
+    public bool IsDown(Keys key) => _curKb.IsKeyDown(key);
+
     /// <summary>Roll the snapshots forward: previous = current, current = now.</summary>
     private void AdvanceKeyboard()
     {

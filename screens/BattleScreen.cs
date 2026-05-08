@@ -98,6 +98,12 @@ public class BattleScreen : IGameScreen
         {
             _ctx.Depth.OnVictory(_roomType);
 
+            // Surface the gold drop in the battle log. The line shows up
+            // briefly during the loot-screen fade-in and reads cleanly even
+            // though we're transitioning out of the battle screen.
+            if (_ctx.Depth.LastGoldAwarded > 0)
+                _battle.Log.Add($"You found {_ctx.Depth.LastGoldAwarded} gold!");
+
             // Map room type → loot context: elites and bosses get reroll-for-upgrade,
             // bosses also get a depth-scaled chance at yellows. Anything else
             // (a regular Battle room) takes the random-no-reroll path.

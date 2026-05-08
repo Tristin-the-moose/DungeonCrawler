@@ -16,13 +16,14 @@ public static class FighterFactory
         var cfg = GameConfig.Instance;
         var stats = new Stats
         {
-            Name    = name ?? cfg.DefaultPlayerName,
-            MaxHp   = cfg.StartingMaxHp,
-            Hp      = cfg.StartingMaxHp,
-            Attack  = cfg.StartingAttack,
-            Defense = cfg.StartingDefense,
-            Speed   = cfg.StartingSpeed,
-            Magic   = cfg.StartingMagic
+            Name       = name ?? cfg.DefaultPlayerName,
+            MaxHp      = cfg.StartingMaxHp,
+            Hp         = cfg.StartingMaxHp,
+            Attack     = cfg.StartingAttack,
+            Defense    = cfg.StartingDefense,
+            Protection = cfg.StartingProtection,
+            Speed      = cfg.StartingSpeed,
+            Magic      = cfg.StartingMagic
         };
 
         var weaponType = cfg.StartWithMagicWeapon ? WeaponType.Staff : WeaponType.Sword;
@@ -48,13 +49,14 @@ public static class FighterFactory
     {
         var stats = new Stats
         {
-            Name    = save.PlayerName,
-            MaxHp   = save.MaxHp,
-            Hp      = save.Hp,
-            Attack  = save.Attack,
-            Defense = save.Defense,
-            Speed   = save.Speed,
-            Magic   = save.Magic,
+            Name       = save.PlayerName,
+            MaxHp      = save.MaxHp,
+            Hp         = save.Hp,
+            Attack     = save.Attack,
+            Defense    = save.Defense,
+            Protection = save.Protection,
+            Speed      = save.Speed,
+            Magic      = save.Magic,
         };
 
         var gear = new EquipmentSet

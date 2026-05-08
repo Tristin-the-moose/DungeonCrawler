@@ -31,7 +31,7 @@ public class Fighter
     public int EffectiveDefense   => Stats.Defense + (Equipment?.TotalBonusDefense ?? 0) + DefendBuff;
     public int EffectiveSpeed     => Stats.Speed   + (Equipment?.TotalBonusSpeed ?? 0);
     public int EffectiveMaxHealth => Stats.MaxHp   + (Equipment?.TotalBonusHealth ?? 0);
-    public int EffectiveProtection => (Equipment?.TotalBonusProtection ?? 0) + DefendBuff;
+    public int EffectiveProtection => Stats.Protection + (Equipment?.TotalBonusProtection ?? 0) + DefendBuff;
 
     public void ResetBuffs()
     {

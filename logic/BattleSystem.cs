@@ -70,13 +70,13 @@ public class BattleSystem
 
         var playerAction = new BattleAction
         {
-            Type = type, Source = Player, Target = playerTarget
+            Type = type, Source = Player, Target = playerTarget, Depth = Depth
         };
 
         // Enemy always attacks
         var enemyAction = new BattleAction
         {
-            Type = BattleActionType.Attack, Source = Enemy, Target = Player
+            Type = BattleActionType.Attack, Source = Enemy, Target = Player, Depth = Depth
         };
 
         // Defend applies immediately — it's a stance, not a timed action.

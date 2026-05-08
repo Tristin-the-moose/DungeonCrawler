@@ -5,7 +5,7 @@ using Microsoft.Xna.Framework;
 
 namespace DungeonCrawler.models;
 
-public enum RoomType { Entrance, Exit, Battle, Elite, Boss, Treasure, Rest }
+public enum RoomType { Entrance, Exit, Battle, Elite, Boss, Treasure, Rest, Shop }
 
 public enum RoomState
 {
@@ -42,6 +42,7 @@ public class Room
         RoomType.Boss     => "BOSS",
         RoomType.Treasure => "CHEST",
         RoomType.Rest     => "REST",
+        RoomType.Shop     => "SHOP",
         _                 => "????"
     };
 
@@ -55,6 +56,7 @@ public class Room
         RoomType.Boss     => new Color(220,  50,  50),
         RoomType.Treasure => new Color(255, 210,  40),
         RoomType.Rest     => new Color(60,  200,  80),
+        RoomType.Shop     => new Color(120, 180, 255),
         _                 => Color.Gray
     };
 }

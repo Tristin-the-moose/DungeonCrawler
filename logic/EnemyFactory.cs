@@ -53,13 +53,14 @@ public static class EnemyFactory
 
         var stats = new Stats
         {
-            Name    = namePrefix + Names[tier],
-            MaxHp   = (int)(cfg.EnemyBaseHp      * mult * hpMult),
-            Hp      = (int)(cfg.EnemyBaseHp      * mult * hpMult),
-            Attack  = (int)(cfg.EnemyBaseAttack  * mult * atkMult),
-            Defense = (int)(cfg.EnemyBaseDefense * mult),
-            Speed   = (int)(cfg.EnemyBaseSpeed   * mult),
-            Magic   = (int)(cfg.EnemyBaseMagic   * mult * atkMult)
+            Name       = namePrefix + Names[tier],
+            MaxHp      = (int)(cfg.EnemyBaseHp         * mult * hpMult),
+            Hp         = (int)(cfg.EnemyBaseHp         * mult * hpMult),
+            Attack     = (int)(cfg.EnemyBaseAttack     * mult * atkMult),
+            Defense    = (int)(cfg.EnemyBaseDefense    * mult),
+            Protection = (int)(cfg.EnemyBaseProtection * mult),
+            Speed      = (int)(cfg.EnemyBaseSpeed      * mult),
+            Magic      = (int)(cfg.EnemyBaseMagic      * mult * atkMult)
         };
 
         var sprite = enemySprites[tier % enemySprites.Length];

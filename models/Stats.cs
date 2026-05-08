@@ -11,7 +11,8 @@ public class Stats
     public int MaxHp { get; set; }
     public int Hp { get; set; }
     public int Attack { get; set; }
-    public int Defense { get; set; }
+    public int Defense { get; set; }     // mitigates physical damage
+    public int Protection { get; set; }  // mitigates magic damage (parallel to Defense)
     public int Speed { get; set; }
     public int Magic { get; set; }
 

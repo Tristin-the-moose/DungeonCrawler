@@ -97,10 +97,14 @@ public static class MapGenerator
         int eliteBonus = Math.Min(depth / 3, 3);
         int eliteCount = eliteBase + eliteBonus;
 
+        // Shop: exactly one per floor (skipped automatically if pool is empty)
+        int shopCount = 1;
+
         // Assign in priority order (rarest/hardest first so they get random spots)
         int cursor = 0;
-        Assign(rooms, pool, ref cursor, RoomType.Elite, eliteCount);
+        Assign(rooms, pool, ref cursor, RoomType.Elite,    eliteCount);
         Assign(rooms, pool, ref cursor, RoomType.Rest,     restCount);
+        Assign(rooms, pool, ref cursor, RoomType.Shop,     shopCount);
         Assign(rooms, pool, ref cursor, RoomType.Treasure, treasureCount);
         // Everything else stays as Battle
 

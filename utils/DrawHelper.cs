@@ -1,6 +1,7 @@
 // ============================================================
 // FILE: utils/DrawHelpers.cs — Shared drawing utilities
 // ============================================================
+using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using FontStashSharp;
@@ -74,4 +75,55 @@ public static class DrawHelpers
         5 => Color.DarkRed,
         _ => Color.White
     };
+
+    /// <summary>
+    /// Truncate <paramref name="text"/> with an ellipsis so it fits inside
+    /// <paramref name="maxWidth"/> when rendered with <paramref name="font"/>.
+    /// Returns the original string unchanged if it already fits.
+    /// </summary>
+    public static string TruncateToWidth(string text, SpriteFontBase font, float maxWidth)
+    {
+        if (string.IsNullOrEmpty(text)) return text;
+        if (font.MeasureString(text).X <= maxWidth) return text;
+
+        // Drop characters from the end until "<text>…" fits.
+        const string Ellipsis = "…";
+        int len = text.Length;
+        while (len > 0 && font.MeasureString(text.Substring(0, len) + Ellipsis).X > maxWidth)
+            len--;
+        return len <= 0 ? Ellipsis : text.Substring(0, len) + Ellipsis;
+    }
+
+    /// <summary>
+    /// Greedy-wrap a comma-separated list (e.g. "+5 HP, +3 ATK, +2 DEF") onto
+    /// multiple lines so each rendered line fits within <paramref name="maxWidth"/>.
+    /// Useful for the loot screen's stat summaries which can blow past a card's width.
+    /// </summary>
+    public static List<string> WrapCommaList(string text, SpriteFontBase font, float maxWidth)
+    {
+        var lines = new List<string>();
+        if (string.IsNullOrEmpty(text)) return lines;
+
+        var parts = text.Split(", ");
+        var current = "";
+        foreach (var p in parts)
+        {
+            var candidate = current.Length == 0 ? p : current + ", " + p;
+            if (font.MeasureString(candidate).X <= maxWidth)
+            {
+                current = candidate;
+            }
+            else
+            {
+                if (current.Length > 0) lines.Add(current);
+                // If the single token itself exceeds maxWidth, hard-truncate it
+                // so we don't loop forever or push a known-overflowing line.
+                current = font.MeasureString(p).X <= maxWidth
+                    ? p
+                    : TruncateToWidth(p, font, maxWidth);
+            }
+        }
+        if (current.Length > 0) lines.Add(current);
+        return lines;
+    }
 }

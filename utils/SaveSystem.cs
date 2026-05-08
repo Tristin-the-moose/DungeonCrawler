@@ -27,6 +27,7 @@ public class SaveData
     public int CurrentDepth { get; set; }
     public int TotalKills { get; set; }
     public int Score { get; set; }
+    public int Gold { get; set; }   // defaults to 0 for old saves
 
     // Player stats
     public string PlayerName { get; set; } = "Hero";
@@ -34,6 +35,7 @@ public class SaveData
     public int Hp { get; set; }
     public int Attack { get; set; }
     public int Defense { get; set; }
+    public int Protection { get; set; }   // defaults to 0 for old saves
     public int Speed { get; set; }
     public int Magic { get; set; }
 
@@ -69,11 +71,13 @@ public class SaveData
             CurrentDepth = depth.CurrentDepth,
             TotalKills   = depth.TotalKills,
             Score        = depth.Score,
+            Gold         = depth.Gold,
             PlayerName   = player.Stats.Name,
             MaxHp        = player.Stats.MaxHp,
             Hp           = player.Stats.Hp,
             Attack       = player.Stats.Attack,
             Defense      = player.Stats.Defense,
+            Protection   = player.Stats.Protection,
             Speed        = player.Stats.Speed,
             Magic        = player.Stats.Magic,
             HeadPiece    = gear?.HeadPiece,

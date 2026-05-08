@@ -21,6 +21,13 @@ public class BattleAction
     public Fighter Target { get; set; }
 
     /// <summary>
+    /// Floor depth this action was queued on. Used to scale the damage
+    /// floor so tanks can't trivialize late levels via chip damage.
+    /// Set by BattleSystem when constructing the action.
+    /// </summary>
+    public int Depth { get; set; }
+
+    /// <summary>
     /// Run the action, emitting each log line through <paramref name="log"/>.
     /// Callers should pass a cached delegate so this stays allocation-free.
     /// </summary>
@@ -37,6 +44,7 @@ public class BattleAction
     private void ExecuteAttack(Random rng, Action<string> log)
     {
         var cfg = GameConfig.Instance;
+        int floor = cfg.MinDamageAt(Depth);
         int atk, def;
         string verb;
 
@@ -53,13 +61,13 @@ public class BattleAction
             verb = "attacks";
         }
 
-        var (dealt, isCrit) = CalculateDamage(atk, def, Source, Target, rng);
+        var (dealt, isCrit) = CalculateDamage(atk, def, Source, Target, rng, floor);
 
         // If target is defending, reduce damage and trigger counter-attack
         if (Target.IsDefending)
         {
             int blocked = (int)(dealt * cfg.DefendBlockPercent);
-            dealt = Math.Max(cfg.MinDamage, dealt - blocked);
+            dealt = Math.Max(floor, dealt - blocked);
 
             Target.Stats.TakeDamage(dealt);
             Target.TriggerFlash();
@@ -72,8 +80,8 @@ public class BattleAction
             // counter-attacker's weapon, not the original attacker's.
             int counterAtk = Target.UsesMagicAttack ? Target.EffectiveMagic : Target.EffectiveAttack;
             int counterDef = Target.UsesMagicAttack ? Source.EffectiveProtection : Source.EffectiveDefense;
-            int counterRaw = Math.Max(cfg.MinDamage, counterAtk - counterDef);
-            int counterDmg = Math.Max(cfg.MinDamage, (int)(counterRaw * cfg.DefendCounterMultiplier));
+            int counterRaw = Math.Max(floor, counterAtk - counterDef);
+            int counterDmg = Math.Max(floor, (int)(counterRaw * cfg.DefendCounterMultiplier));
 
             Source.Stats.TakeDamage(counterDmg);
             Source.TriggerFlash();
@@ -123,16 +131,18 @@ public class BattleAction
     /// <summary>
     /// Damage formula with variance and speed-based crit chance.
     /// Crit% = BaseCrit + SpeedCritBonus * max(0, attackerSpeed - defenderSpeed)
+    /// <paramref name="floor"/> is the depth-scaled minimum damage so a high-
+    /// defense build still takes meaningful chip damage at deep floors.
     /// </summary>
     private static (int damage, bool isCrit) CalculateDamage(
-        int atk, int def, Fighter source, Fighter target, Random rng)
+        int atk, int def, Fighter source, Fighter target, Random rng, int floor)
     {
         var cfg = GameConfig.Instance;
-        int raw = Math.Max(cfg.MinDamage, atk - def);
+        int raw = Math.Max(floor, atk - def);
 
         // Variance roll
         float roll = 1f + (float)(rng.NextDouble() * 2 - 1) * cfg.DamageVariance;
-        int damage = Math.Max(cfg.MinDamage, (int)(raw * roll));
+        int damage = Math.Max(floor, (int)(raw * roll));
 
         // Crit chance scales with speed advantage
         int speedDiff = Math.Max(0, source.EffectiveSpeed - target.EffectiveSpeed);
