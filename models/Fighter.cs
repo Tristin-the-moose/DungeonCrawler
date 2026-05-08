@@ -40,6 +40,18 @@ public class Fighter
     }
 
     /// <summary>
+    /// Wipe transient combat state at the start of a new battle: heal cooldown,
+    /// defend buffs, hit-flash. Equipment and Stats are untouched.
+    /// </summary>
+    public void ResetCombatState()
+    {
+        HealCooldown = 0;
+        DefendBuff   = 0;
+        IsDefending  = false;
+        FlashTimer   = 0f;
+    }
+
+    /// <summary>
     /// Restore HP, clamped to the fighter's effective max (base + gear bonuses).
     /// All heal callers should use this — Stats has no Heal of its own because
     /// it has no knowledge of equipment HP bonuses.

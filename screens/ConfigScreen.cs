@@ -24,7 +24,7 @@ public class ConfigScreen : IGameScreen
     private const int MaxDrawY = 480;  // stop drawing entries below this Y value
 
     // ── Input ──
-    private KeyboardState _prevKb;
+    private readonly KeyboardWatcher _kb = new();
     private float _holdTimer;
     private float _holdRepeatRate = 0.05f;
     private float _holdDelay = 0.4f;
@@ -51,9 +51,7 @@ public class ConfigScreen : IGameScreen
         ["DefendBoost"]              = "COMBAT",
         ["DefendBlockPercent"]       = "COMBAT",
         ["DefendCounterMultiplier"]  = "COMBAT",
-        ["HealBase"]                 = "COMBAT",
         ["HealPercent"]              = "COMBAT",
-        ["MinHealPercent_Combat"]    = "COMBAT",
         ["HealCooldownTurns"]        = "COMBAT",
         ["DamageVariance"]           = "COMBAT",
         ["CritChance"]               = "COMBAT",
@@ -61,7 +59,6 @@ public class ConfigScreen : IGameScreen
         ["SpeedCritBonus"]           = "COMBAT",
         ["PreActionDelay"]           = "COMBAT",
         ["BetweenActionDelay"]       = "COMBAT",
-        ["EnemyAttackChance"]        = "COMBAT",
         ["FlashDuration"]            = "COMBAT",
         // Enemy Scaling
         ["EnemyBaseHp"]              = "ENEMY SCALING",
@@ -73,11 +70,11 @@ public class ConfigScreen : IGameScreen
         ["EnemyScaleMultiplier"]     = "ENEMY SCALING",
         // Progression
         ["ScorePerDepth"]            = "PROGRESSION",
-        ["HealPercentBetweenFloors"] = "PROGRESSION",
-        ["HealDecayPerFloor"]        = "PROGRESSION",
-        ["MinHealPercent"]           = "PROGRESSION",
         ["MaxHpBoostPerFloor"]       = "PROGRESSION",
         ["AttackBoostPerFloor"]      = "PROGRESSION",
+        ["BattleClearBonus"]         = "PROGRESSION",
+        ["EliteClearBonus"]          = "PROGRESSION",
+        ["BossClearBonus"]           = "PROGRESSION",
         // Loot
         ["LootChoiceCount"]          = "LOOT",
         ["LootTierDivisor"]          = "LOOT",
@@ -87,13 +84,16 @@ public class ConfigScreen : IGameScreen
         ["LootScaleMultiplier"]      = "LOOT",
         ["CursedLootChance"]         = "LOOT",
         ["MaxRerollAttempts"]        = "LOOT",
+        ["BossYellowBaseChance"]     = "LOOT",
+        ["BossYellowDepthBonus"]     = "LOOT",
+        ["TreasurePurpleBaseChance"] = "LOOT",
+        ["TreasurePurpleDepthBonus"] = "LOOT",
     };
 
     public ConfigScreen(Action<IGameScreen> setScreen, IGameScreen returnScreen)
     {
         _setScreen = setScreen;
         _returnScreen = returnScreen;
-        _prevKb = Keyboard.GetState();
         BuildEntries();
     }
 
@@ -116,6 +116,7 @@ public class ConfigScreen : IGameScreen
             _entries.Add(new ConfigEntry
             {
                 Name = prop.Name,
+                DisplayName = FormatName(prop.Name),
                 Property = prop,
                 Category = GetCategory(prop.Name)
             });
@@ -129,12 +130,12 @@ public class ConfigScreen : IGameScreen
 
     public void Update(float dt)
     {
-        var kb = Keyboard.GetState();
+        _kb.Update();
 
         // Navigation
-        if (WasPressed(kb, Keys.Up))
+        if (_kb.WasPressed(Keys.Up))
             _selectedIndex = (_selectedIndex - 1 + _entries.Count) % _entries.Count;
-        if (WasPressed(kb, Keys.Down))
+        if (_kb.WasPressed(Keys.Down))
             _selectedIndex = (_selectedIndex + 1) % _entries.Count;
 
         // Adjust scroll to keep selection visible — we'll calculate during Draw
@@ -146,26 +147,26 @@ public class ConfigScreen : IGameScreen
         if (type == typeof(int))
         {
             int val = (int)entry.Property.GetValue(GameConfig.Instance);
-            int step = kb.IsKeyDown(Keys.LeftShift) ? 10 : 1;
+            int step = _kb.IsDown(Keys.LeftShift) ? 10 : 1;
 
-            if (WasPressed(kb, Keys.Right) || HeldRepeat(kb, Keys.Right, dt))
+            if (_kb.WasPressed(Keys.Right) || HeldRepeat(Keys.Right, dt))
                 entry.Property.SetValue(GameConfig.Instance, val + step);
-            if (WasPressed(kb, Keys.Left) || HeldRepeat(kb, Keys.Left, dt))
+            if (_kb.WasPressed(Keys.Left) || HeldRepeat(Keys.Left, dt))
                 entry.Property.SetValue(GameConfig.Instance, Math.Max(0, val - step));
         }
         else if (type == typeof(float))
         {
             float val = (float)entry.Property.GetValue(GameConfig.Instance);
-            float step = kb.IsKeyDown(Keys.LeftShift) ? 0.1f : 0.01f;
+            float step = _kb.IsDown(Keys.LeftShift) ? 0.1f : 0.01f;
 
-            if (WasPressed(kb, Keys.Right) || HeldRepeat(kb, Keys.Right, dt))
+            if (_kb.WasPressed(Keys.Right) || HeldRepeat(Keys.Right, dt))
                 entry.Property.SetValue(GameConfig.Instance, MathF.Round(val + step, 2));
-            if (WasPressed(kb, Keys.Left) || HeldRepeat(kb, Keys.Left, dt))
+            if (_kb.WasPressed(Keys.Left) || HeldRepeat(Keys.Left, dt))
                 entry.Property.SetValue(GameConfig.Instance, MathF.Round(MathF.Max(0, val - step), 2));
         }
         else if (type == typeof(bool))
         {
-            if (WasPressed(kb, Keys.Right) || WasPressed(kb, Keys.Left))
+            if (_kb.WasPressed(Keys.Right) || _kb.WasPressed(Keys.Left))
             {
                 bool val = (bool)entry.Property.GetValue(GameConfig.Instance);
                 entry.Property.SetValue(GameConfig.Instance, !val);
@@ -173,7 +174,7 @@ public class ConfigScreen : IGameScreen
         }
 
         // Save & Exit
-        if (WasPressed(kb, Keys.Enter))
+        if (_kb.WasPressed(Keys.Enter))
         {
             GameConfig.Instance.Save();
             GameLogger.Info("Config saved from in-game editor");
@@ -181,27 +182,25 @@ public class ConfigScreen : IGameScreen
         }
 
         // Discard & Exit
-        if (WasPressed(kb, Keys.Escape))
+        if (_kb.WasPressed(Keys.Escape))
         {
             GameConfig.Reload();
             _setScreen(_returnScreen);
         }
 
         // Reset to defaults
-        if (WasPressed(kb, Keys.Delete))
+        if (_kb.WasPressed(Keys.Delete))
         {
             GameConfig.ResetToDefaults();
             GameLogger.Info("Config reset to defaults");
         }
 
         // Handle hold key reset
-        if (_heldKey.HasValue && kb.IsKeyUp(_heldKey.Value))
+        if (_heldKey.HasValue && !_kb.IsDown(_heldKey.Value))
         {
             _heldKey = null;
             _holdTimer = 0;
         }
-
-        _prevKb = kb;
     }
 
     public void Draw(SpriteBatch sb)
@@ -265,8 +264,7 @@ public class ConfigScreen : IGameScreen
 
                 // Name
                 Color nameColor = selected ? Color.Yellow : Color.White;
-                string displayName = FormatName(entry.Name);
-                sb.DrawString(font, displayName, new Vector2(nameX, y), nameColor);
+                sb.DrawString(font, entry.DisplayName, new Vector2(nameX, y), nameColor);
 
                 // Value
                 object val = entry.Property.GetValue(GameConfig.Instance);
@@ -315,17 +313,14 @@ public class ConfigScreen : IGameScreen
         return new string(chars.ToArray());
     }
 
-    private bool WasPressed(KeyboardState kb, Keys key)
-        => kb.IsKeyDown(key) && _prevKb.IsKeyUp(key);
-
     /// <summary>
     /// Returns true repeatedly while a key is held, after an initial delay.
     /// Used for smooth value scrubbing with Left/Right arrows.
     /// </summary>
-    private bool HeldRepeat(KeyboardState kb, Keys key, float dt)
+    private bool HeldRepeat(Keys key, float dt)
     {
-        if (!kb.IsKeyDown(key)) return false;
-        if (_prevKb.IsKeyUp(key))
+        if (!_kb.IsDown(key)) return false;
+        if (_kb.WasPressed(key))
         {
             _heldKey = key;
             _holdTimer = 0;
@@ -346,6 +341,7 @@ public class ConfigScreen : IGameScreen
     private class ConfigEntry
     {
         public string Name;
+        public string DisplayName;     // FormatName(Name), cached at build time
         public PropertyInfo Property;
         public string Category;
     }

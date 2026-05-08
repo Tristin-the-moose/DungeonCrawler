@@ -42,8 +42,8 @@ public static class MapGenerator
         const int MinDistFromEntrance = 2;
 
         var bossCandidates = new List<(int x, int y)>();
-        for (int y = 0; y < height; y++)
-            for (int x = 0; x < width; x++)
+        for (int x = 0; x < width; x++)
+            for (int y = 0; y < height; y++)
             {
                 int dist = Math.Abs(x - entranceX) + Math.Abs(y - entranceY);
                 if (dist >= MinDistFromEntrance)
@@ -56,8 +56,8 @@ public static class MapGenerator
         if (bossCandidates.Count == 0)
         {
             int bestX = entranceX, bestY = entranceY, bestDist = -1;
-            for (int y = 0; y < height; y++)
-                for (int x = 0; x < width; x++)
+            for (int x = 0; x < width; x++)
+                for (int y = 0; y < height; y++)
                 {
                     if (x == entranceX && y == entranceY) continue;
                     int d = Math.Abs(x - entranceX) + Math.Abs(y - entranceY);
@@ -75,7 +75,9 @@ public static class MapGenerator
         }
 
         // ── Build shuffled list of assignable positions ───────
-        var pool = new List<(int x, int y)>(width * height - 2);
+        // Clamp at 0 — on a 1×1 grid the boss isn't placed, so width*height-2
+        // would underflow and crash List<>'s capacity ctor.
+        var pool = new List<(int x, int y)>(Math.Max(0, width * height - 2));
         for (int x = 0; x < width; x++)
             for (int y = 0; y < height; y++)
                 if (rooms[x, y].Type == RoomType.Battle)

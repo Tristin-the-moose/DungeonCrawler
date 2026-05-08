@@ -96,7 +96,7 @@ public class BattleScreen : IGameScreen
         // Transition on battle end
         if (_battle.State == BattleTurnState.BattleWon)
         {
-            _ctx.Depth.OnVictory();
+            _ctx.Depth.OnVictory(_roomType);
 
             // Map room type → loot context: elites and bosses get reroll-for-upgrade,
             // bosses also get a depth-scaled chance at yellows. Anything else

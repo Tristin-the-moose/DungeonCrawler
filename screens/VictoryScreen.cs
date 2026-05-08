@@ -64,7 +64,7 @@ public class VictoryScreen : IGameScreen
         string msg = $"Floor {_ctx.Depth.CurrentDepth} Cleared!   Score: {_ctx.Depth.Score}";
         DrawHelpers.CenterText(sb, msg, 140, Color.Gold);
 
-        string hp = $"HP: {_ctx.Player.Stats.Hp}/{_ctx.Player.Stats.MaxHp}";
+        string hp = $"HP: {_ctx.Player.Stats.Hp}/{_ctx.Player.EffectiveMaxHealth}";
         DrawHelpers.CenterText(sb, hp, 200, Color.LightGreen);
 
         for (int i = 0; i < Options.Length; i++)

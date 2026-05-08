@@ -1,8 +1,12 @@
 // ============================================================
 // FILE: logic/LootFactory.cs — Procedural loot generation
 // ============================================================
+// Static data lives in sibling files:
+//   • LootNameTables — per-slot/tier item names
+//   • LootStatPools  — StatKey enum + slot/weapon stat pools
+//   • LootRarity     — weighted rarity roll with context boosts
+// This file keeps just the orchestration and bonus application.
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using DungeonCrawler;
 using DungeonCrawler.models;
@@ -23,58 +27,8 @@ public enum LootContext
 
 public static class LootFactory
 {
-    private static readonly Dictionary<EquipmentSlots, string[][]> NameTables = new()
-    {
-        [EquipmentSlots.HeadPiece] = new[] {
-            new[] { "Cloth Hood", "Leather Cap", "Worn Helmet" },
-            new[] { "Iron Helm", "Chain Coif", "Scout Visor" },
-            new[] { "Steel Helm", "Mage Crown", "War Helmet" },
-            new[] { "Mythril Helm", "Shadow Hood", "Dragon Visor" },
-            new[] { "Legendary Crown", "Void Helm", "God Helm" }
-        },
-        [EquipmentSlots.ChestPiece] = new[] {
-            new[] { "Cloth Tunic", "Leather Vest", "Padded Shirt" },
-            new[] { "Iron Cuirass", "Chain Mail", "Ranger Coat" },
-            new[] { "Steel Plate", "Mage Robe", "War Armor" },
-            new[] { "Mythril Plate", "Shadow Cloak", "Dragon Mail" },
-            new[] { "Legendary Plate", "Void Armor", "God Armor" }
-        },
-        [EquipmentSlots.Leggings] = new[] {
-            new[] { "Cloth Pants", "Leather Leggings", "Padded Pants" },
-            new[] { "Iron Greaves", "Chain Legs", "Ranger Chaps" },
-            new[] { "Steel Greaves", "Mage Skirt", "War Tassets" },
-            new[] { "Mythril Greaves", "Shadow Legs", "Dragon Greaves" },
-            new[] { "Legendary Greaves", "Void Legs", "God Greaves" }
-        },
-        [EquipmentSlots.Booties] = new[] {
-            new[] { "Leather Sandals", "Worn Boots", "Cloth Shoes" },
-            new[] { "Iron Boots", "Chain Boots", "Scout Boots" },
-            new[] { "Steel Sabatons", "Mage Slippers", "War Boots" },
-            new[] { "Mythril Boots", "Shadow Steps", "Dragon Boots" },
-            new[] { "Legendary Boots", "Void Treads", "God Boots" }
-        },
-        [EquipmentSlots.Weapon] = new[] {
-            new[] { "Wooden Sword", "Rusty Dagger", "Oak Staff", "Twig Wand", "Stone Mace" },
-            new[] { "Iron Sword", "Steel Dagger", "Arcane Staff", "Iron Wand", "Iron Mace" },
-            new[] { "Steel Blade", "Assassin Blade", "Mystic Staff", "Crystal Wand", "War Mace" },
-            new[] { "Mythril Sword", "Shadow Blade", "Dragon Staff", "Void Wand", "Mythril Mace" },
-            new[] { "Legendary Blade", "Void Edge", "God Staff", "God Wand", "God Mace" }
-        },
-        [EquipmentSlots.Ring] = new[] {
-            new[] { "Copper Band", "Wooden Ring", "Bone Ring" },
-            new[] { "Iron Ring", "Silver Band", "Scout Ring" },
-            new[] { "Steel Ring", "Mage Ring", "War Signet" },
-            new[] { "Mythril Ring", "Shadow Band", "Dragon Ring" },
-            new[] { "Legendary Ring", "Void Band", "God Ring" }
-        },
-        [EquipmentSlots.Necklace] = new[] {
-            new[] { "Cord Necklace", "Bone Pendant", "Wooden Charm" },
-            new[] { "Iron Chain", "Silver Amulet", "Scout Pendant" },
-            new[] { "Steel Locket", "Mage Amulet", "War Medallion" },
-            new[] { "Mythril Pendant", "Shadow Amulet", "Dragon Charm" },
-            new[] { "Legendary Amulet", "Void Pendant", "God Amulet" }
-        }
-    };
+    // Cached once — Enum.GetValues allocates a fresh array on each call.
+    private static readonly EquipmentSlots[] AllSlots = Enum.GetValues<EquipmentSlots>();
 
     /// <summary>
     /// Generate loot choices with unique slots. Reroll behaviour depends on
@@ -92,10 +46,17 @@ public static class LootFactory
         var cfg = GameConfig.Instance;
         int count = cfg.LootChoiceCount;
 
-        // 1. Pick unique slots so you never see 3 helmets
-        var allSlots    = Enum.GetValues<EquipmentSlots>();
-        var shuffled    = allSlots.OrderBy(_ => rng.Next()).ToArray();
-        var chosenSlots = shuffled.Take(count).ToArray();
+        // 1. Pick `count` unique slots via partial Fisher-Yates over a stack
+        //    buffer. Properly uniform, and the only heap alloc is the result.
+        var chosenSlots = new EquipmentSlots[count];
+        Span<EquipmentSlots> pool = stackalloc EquipmentSlots[AllSlots.Length];
+        AllSlots.AsSpan().CopyTo(pool);
+        for (int i = 0; i < count; i++)
+        {
+            int j = i + rng.Next(pool.Length - i);
+            (pool[i], pool[j]) = (pool[j], pool[i]);
+            chosenSlots[i] = pool[i];
+        }
 
         // 2. Generate one item per slot, honouring the context's rarity rules
         var choices = new Equipment[count];
@@ -111,10 +72,24 @@ public static class LootFactory
             bool hasUpgrade = choices.Any(item => IsUpgrade(item, currentGear));
             if (!hasUpgrade)
             {
+                // Reroll the slot in our hand whose currently-equipped item has
+                // the lowest TotalStats — best odds of producing an upgrade.
+                int rerollIdx   = 0;
+                int lowestStats = int.MaxValue;
+                for (int i = 0; i < count; i++)
+                {
+                    int currentStats = currentGear.Get(chosenSlots[i])?.TotalStats ?? 0;
+                    if (currentStats < lowestStats)
+                    {
+                        lowestStats = currentStats;
+                        rerollIdx   = i;
+                    }
+                }
+
                 for (int attempt = 0; attempt < cfg.MaxRerollAttempts; attempt++)
                 {
-                    choices[0] = GenerateDrop(depth, rng, chosenSlots[0], context);
-                    if (IsUpgrade(choices[0], currentGear))
+                    choices[rerollIdx] = GenerateDrop(depth, rng, chosenSlots[rerollIdx], context);
+                    if (IsUpgrade(choices[rerollIdx], currentGear))
                         break;
                 }
             }
@@ -126,7 +101,7 @@ public static class LootFactory
     /// <summary>
     /// Generate a single equipment drop for a specific slot.
     /// Rarity drives both colour and the number of stat bonuses the item carries
-    /// (white 0 → yellow 4). See <see cref="SlotStatPools"/>.
+    /// (white 0 → yellow 4).
     /// </summary>
     public static Equipment GenerateDrop(
         int depth, Random rng,
@@ -136,9 +111,9 @@ public static class LootFactory
         var cfg  = GameConfig.Instance;
         var slot = forceSlot ?? RandomSlot(rng);
 
-        // Weighted rarity roll — deeper floors weight toward higher rarities (= more bonuses).
-        // Boss context layers an extra depth-scaled chance to roll a guaranteed yellow.
-        int rarity = RollRarity(depth, rng, cfg, context);
+        // Weighted rarity roll — see LootRarity.Roll for the formula and
+        // context-specific minimum-rarity boosts (Boss / Treasure).
+        int rarity = LootRarity.Roll(depth, rng, cfg, context);
 
         var item = new Equipment
         {
@@ -164,58 +139,10 @@ public static class LootFactory
         {
             ApplyCurse(item, rng);
             item.Name = "Cursed " + item.Name;
+            item.Rarity = 5;
         }
 
         return item;
-    }
-
-    /// <summary>
-    /// Weighted rarity roll. Higher depths shift the probability toward rarer tiers.
-    /// Rarity 0 = White (junk), 1 = Green, 2 = Blue, 3 = Purple, 4 = Yellow.
-    ///
-    /// After the normal weighted roll, the context can enforce a minimum rarity:
-    ///   • Boss     – depth-scaled chance to lock in yellow.
-    ///   • Treasure – depth-scaled chance to floor at purple (still allowed to
-    ///                roll up to yellow on the normal path).
-    /// </summary>
-    private static int RollRarity(int depth, Random rng, GameConfig cfg, LootContext context)
-    {
-        // 1. Base depth-driven weighted roll
-        int baseRarity = Math.Clamp((depth - 1) / cfg.LootTierDivisor, 0, cfg.LootMaxTier);
-
-        int roll = rng.Next(100);
-        int rarity;
-        if (roll < 50)
-            rarity = baseRarity;
-        else if (roll < 80)
-            rarity = baseRarity - 1;
-        else if (roll < 95)
-            rarity = baseRarity + 1;
-        else
-            rarity = baseRarity + 2;
-
-        rarity = Math.Clamp(rarity, 0, cfg.LootMaxTier);
-
-        // 2. Context-specific minimum-rarity boosts
-        switch (context)
-        {
-            case LootContext.Boss:
-            {
-                int yellowChance = cfg.BossYellowBaseChance + depth * cfg.BossYellowDepthBonus;
-                if (rng.Next(100) < yellowChance)
-                    rarity = cfg.LootMaxTier; // Yellow
-                break;
-            }
-            case LootContext.Treasure:
-            {
-                int purpleChance = cfg.TreasurePurpleBaseChance + depth * cfg.TreasurePurpleDepthBonus;
-                if (rng.Next(100) < purpleChance)
-                    rarity = Math.Max(rarity, 3); // At least Purple — natural Yellow rolls survive.
-                break;
-            }
-        }
-
-        return rarity;
     }
 
     /// <summary>
@@ -223,15 +150,13 @@ public static class LootFactory
     /// </summary>
     private static void ApplyCurse(Equipment item, Random rng)
     {
-        // Pick a stat to penalize that isn't the item's primary stat
-        int curse = rng.Next(3);
+        int curse   = rng.Next(3);
         int penalty = rng.Next(2, 5);
-
         switch (curse)
         {
-            case 0: item.SpeedBoost -= penalty;    break;
-            case 1: item.DefenseBonus -= penalty;  break;
-            case 2: item.HealthBonus -= penalty;   break;
+            case 0: item.SpeedBoost   -= penalty; break;
+            case 1: item.DefenseBonus -= penalty; break;
+            case 2: item.HealthBonus  -= penalty; break;
         }
     }
 
@@ -243,36 +168,8 @@ public static class LootFactory
         return item.TotalStats > current.TotalStats;
     }
 
-    private static EquipmentSlots RandomSlot(Random rng)
-    {
-        var slots = Enum.GetValues<EquipmentSlots>();
-        return slots[rng.Next(slots.Length)];
-    }
-
-    // ── Stat pools ──────────────────────────────────────────
-    // The first entry in each list is the slot's identity stat (rolled first
-    // and gets the largest value). Subsequent entries are added in order as
-    // rarity climbs — yellow items (rarity 4) roll the first 4 entries.
-    private enum StatKey { Health, Attack, Magic, Defense, Protection, Speed }
-
-    private static readonly Dictionary<EquipmentSlots, StatKey[]> SlotStatPools = new()
-    {
-        [EquipmentSlots.HeadPiece]  = new[] { StatKey.Health,  StatKey.Defense, StatKey.Magic,      StatKey.Protection },
-        [EquipmentSlots.ChestPiece] = new[] { StatKey.Defense, StatKey.Health,  StatKey.Protection, StatKey.Magic      },
-        [EquipmentSlots.Leggings]   = new[] { StatKey.Defense, StatKey.Speed,   StatKey.Health,     StatKey.Protection },
-        [EquipmentSlots.Booties]    = new[] { StatKey.Speed,   StatKey.Defense, StatKey.Health,     StatKey.Protection },
-        [EquipmentSlots.Ring]       = new[] { StatKey.Magic,   StatKey.Attack,  StatKey.Defense,    StatKey.Speed      },
-        [EquipmentSlots.Necklace]   = new[] { StatKey.Health,  StatKey.Magic,   StatKey.Protection, StatKey.Defense    },
-    };
-
-    private static readonly Dictionary<WeaponType, StatKey[]> WeaponStatPools = new()
-    {
-        [WeaponType.Sword]  = new[] { StatKey.Attack, StatKey.Defense, StatKey.Speed,   StatKey.Health     },
-        [WeaponType.Dagger] = new[] { StatKey.Attack, StatKey.Speed,   StatKey.Defense, StatKey.Health     },
-        [WeaponType.Staff]  = new[] { StatKey.Magic,  StatKey.Health,  StatKey.Speed,   StatKey.Protection },
-        [WeaponType.Wand]   = new[] { StatKey.Magic,  StatKey.Speed,   StatKey.Health,  StatKey.Protection },
-        [WeaponType.Mace]   = new[] { StatKey.Attack, StatKey.Defense, StatKey.Health,  StatKey.Speed      },
-    };
+    private static EquipmentSlots RandomSlot(Random rng) =>
+        AllSlots[rng.Next(AllSlots.Length)];
 
     /// <summary>
     /// Roll <paramref name="rarity"/> stat bonuses onto the item, in pool order.
@@ -285,8 +182,8 @@ public static class LootFactory
 
         StatKey[] pool;
         if (item.EquipmentType == EquipmentSlots.Weapon && item.Weapon.HasValue)
-            pool = WeaponStatPools[item.Weapon.Value];
-        else if (!SlotStatPools.TryGetValue(item.EquipmentType, out pool))
+            pool = LootStatPools.Weapons[item.Weapon.Value];
+        else if (!LootStatPools.Slots.TryGetValue(item.EquipmentType, out pool))
             return;
 
         int bonusCount = Math.Min(rarity, pool.Length);
@@ -328,7 +225,7 @@ public static class LootFactory
 
     public static string PickWeaponName(WeaponType type, int tier, Random rng)
     {
-        if (!NameTables.TryGetValue(EquipmentSlots.Weapon, out var table))
+        if (!LootNameTables.Names.TryGetValue(EquipmentSlots.Weapon, out var table))
             return "Unknown Weapon";
 
         var names = table[Math.Min(tier, table.Length - 1)];
@@ -338,7 +235,7 @@ public static class LootFactory
 
     private static string PickName(EquipmentSlots slot, int tier, Random rng)
     {
-        if (!NameTables.TryGetValue(slot, out var table))
+        if (!LootNameTables.Names.TryGetValue(slot, out var table))
             return "Unknown Gear";
 
         var names = table[Math.Min(tier, table.Length - 1)];

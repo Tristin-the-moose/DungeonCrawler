@@ -29,13 +29,27 @@ public class BattleSystem
     private float _animTimer;
     private readonly Queue<BattleAction> _pendingActions = new();
 
+    // Cached so BattleAction.Execute(_rng, _logLine) doesn't allocate a fresh
+    // delegate per action.
+    private readonly Action<string> _logLine;
+
+    // % chance the enemy holds back instead of swinging into a defending player.
+    private const int EnemyDefendSkipChance = 50;
+
     public BattleSystem(Fighter player, Fighter enemy, int depth, Random rng)
     {
         Player = player;
-        Enemy = enemy;
-        Depth = depth;
-        _rng = rng;
-        State = BattleTurnState.PlayerChoosing;
+        Enemy  = enemy;
+        Depth  = depth;
+        _rng   = rng;
+        State  = BattleTurnState.PlayerChoosing;
+        _logLine = Log.Add;
+
+        // Fresh battle — clear lingering combat state on both fighters
+        // (heal cooldowns, defend buffs, etc.).
+        Player.ResetCombatState();
+        Enemy.ResetCombatState();
+
         Log.Add($"A wild {enemy.Stats.Name} appears! (Depth {depth})");
     }
 
@@ -45,11 +59,11 @@ public class BattleSystem
 
         var cfg = GameConfig.Instance;
 
-        // Reset temporary defend buffs and tick cooldowns
+        // Reset temporary defend buffs and tick cooldowns. Only the player
+        // has cooldowns today (Heal); enemies don't heal, so we don't tick them.
         Player.ResetBuffs();
         Enemy.ResetBuffs();
         Player.TickCooldowns();
-        Enemy.TickCooldowns();
 
         var playerTarget = type is BattleActionType.Defend or BattleActionType.Heal
             ? Player : Enemy;
@@ -69,12 +83,19 @@ public class BattleSystem
         // This ensures it works regardless of speed/turn order.
         if (type == BattleActionType.Defend)
         {
-            string[] defendMsgs = playerAction.Execute(_rng);
-            foreach (var msg in defendMsgs)
-                Log.Add(msg);
+            playerAction.Execute(_rng, _logLine);
 
-            // Only queue the enemy action since defend already resolved
-            _pendingActions.Enqueue(enemyAction);
+            // 50/50: enemy hesitates and waits, or commits to its attack into
+            // the defender (which lets the player's counter trigger).
+            if (_rng.Next(100) < EnemyDefendSkipChance)
+            {
+                Log.Add($"{Enemy.Stats.Name} hesitates and waits.");
+                // Queue nothing — Update will fall through to PlayerChoosing.
+            }
+            else
+            {
+                _pendingActions.Enqueue(enemyAction);
+            }
         }
         else
         {
@@ -110,11 +131,7 @@ public class BattleSystem
             var action = _pendingActions.Dequeue();
 
             if (action.Source.Stats.IsAlive)
-            {
-                string[] messages = action.Execute(_rng);
-                foreach (var msg in messages)
-                    Log.Add(msg);
-            }
+                action.Execute(_rng, _logLine);
 
             _animTimer = GameConfig.Instance.BetweenActionDelay;
         }

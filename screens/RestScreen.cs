@@ -15,6 +15,7 @@ public class RestScreen : IGameScreen
     private readonly IGameScreen          _returnTo;
     private readonly int                  _healAmount;
     private readonly MenuSelector         _input = new(1);
+    private bool                          _healed;
 
     public RestScreen(GameContext ctx, Action<IGameScreen> setScreen, IGameScreen returnTo)
     {
@@ -22,14 +23,21 @@ public class RestScreen : IGameScreen
         _setScreen = setScreen;
         _returnTo  = returnTo;
 
-        // Heal a percentage of effective max HP (configured via RestHealPercent)
+        // Pre-compute the heal amount so the on-screen label always matches
+        // what gets applied. The actual Heal() runs on first Update so the
+        // constructor stays side-effect-free.
         float pct   = GameConfig.Instance.RestHealPercent;
         _healAmount = Math.Max(1, (int)(_ctx.Player.EffectiveMaxHealth * pct));
-        _ctx.Player.Heal(_healAmount);
     }
 
     public void Update(float dt)
     {
+        if (!_healed)
+        {
+            _ctx.Player.Heal(_healAmount);
+            _healed = true;
+        }
+
         _input.Update();
         if (_input.Confirmed)
             _setScreen(_returnTo);

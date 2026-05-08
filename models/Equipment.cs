@@ -1,9 +1,7 @@
 // ============================================================
 // FILE: models/Equipment.cs — Equipment item + slot management
 // ============================================================
-using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace DungeonCrawler.models;
 
@@ -42,7 +40,14 @@ public class Equipment
     public int TotalStats => HealthBonus + AttackBonus + MagicBonus
                            + DefenseBonus + ProtectionBonus + SpeedBoost;
 
-    public string StatSummary()
+    // Cached on first read — Equipment is immutable after LootFactory builds it,
+    // so the summary string can never change. If a future feature mutates an
+    // already-built item in place (enchants, buffs), clear this field there.
+    private string _summary;
+
+    public string StatSummary() => _summary ??= BuildSummary();
+
+    private string BuildSummary()
     {
         var parts = new List<string>(6);
         if (HealthBonus != 0)     parts.Add($"{HealthBonus:+#;-#;0} HP");
@@ -58,9 +63,23 @@ public class Equipment
 public class EquipmentSet
 {
     // ── Dictionary-backed storage replaces 7 individual properties ──
-    // This eliminates the duplicated Get/Equip switch blocks and
-    // the 6 copy-pasted TotalBonus properties (42 null-checks → 1 loop).
     private readonly Dictionary<EquipmentSlots, Equipment> _slots = new();
+
+    // ── Cached totals ──
+    // Recomputed whenever a slot changes (Equip / save-compat setters).
+    // Reads are tight loops in Fighter.Effective* and the battle/map screens,
+    // so caching avoids the LINQ Sum + delegate alloc that used to fire there.
+    //
+    // Note: this assumes Equipment instances aren't mutated in place after
+    // they're equipped. LootFactory builds items and they're effectively
+    // immutable thereafter — if that ever changes, call RecomputeTotals()
+    // after the mutation.
+    private int _totalHealth;
+    private int _totalAttack;
+    private int _totalMagic;
+    private int _totalDefense;
+    private int _totalProtection;
+    private int _totalSpeed;
 
     public EquipmentSet()
     {
@@ -72,6 +91,7 @@ public class EquipmentSet
         _slots[EquipmentSlots.Necklace]   = new Equipment { EquipmentType = EquipmentSlots.Necklace,   Name = "Braided Necklace" };
         _slots[EquipmentSlots.Ring]       = new Equipment { EquipmentType = EquipmentSlots.Ring,        Name = "Old Wedding Ring" };
         _slots[EquipmentSlots.Weapon]     = new Equipment { EquipmentType = EquipmentSlots.Weapon,      Name = "Ye Old Dukes", Weapon = WeaponType.Sword };
+        RecomputeTotals();
     }
 
     public Equipment Get(EquipmentSlots slot) =>
@@ -81,30 +101,62 @@ public class EquipmentSet
     {
         var old = Get(newItem.EquipmentType);
         _slots[newItem.EquipmentType] = newItem;
+        RecomputeTotals();
         return old;
     }
 
     /// <summary>All currently equipped items (for iteration).</summary>
     public IEnumerable<Equipment> AllItems => _slots.Values;
 
-    // ── Total bonuses: one LINQ sum replaces 6 copy-pasted properties ──
-    private int Sum(Func<Equipment, int> selector) =>
-        _slots.Values.Sum(e => e != null ? selector(e) : 0);
-
-    public int TotalBonusHealth     => Sum(e => e.HealthBonus);
-    public int TotalBonusAttack     => Sum(e => e.AttackBonus);
-    public int TotalBonusMagic      => Sum(e => e.MagicBonus);
-    public int TotalBonusDefense    => Sum(e => e.DefenseBonus);
-    public int TotalBonusProtection => Sum(e => e.ProtectionBonus);
-    public int TotalBonusSpeed      => Sum(e => e.SpeedBoost);
+    // ── Total bonuses: cached field reads (recomputed on slot change) ──
+    public int TotalBonusHealth     => _totalHealth;
+    public int TotalBonusAttack     => _totalAttack;
+    public int TotalBonusMagic      => _totalMagic;
+    public int TotalBonusDefense    => _totalDefense;
+    public int TotalBonusProtection => _totalProtection;
+    public int TotalBonusSpeed      => _totalSpeed;
 
     // ── Save/Load compatibility properties ──
-    // These let SaveSystem still access individual slots by name.
-    public Equipment HeadPiece  { get => Get(EquipmentSlots.HeadPiece);  set => _slots[EquipmentSlots.HeadPiece] = value; }
-    public Equipment ChestPiece { get => Get(EquipmentSlots.ChestPiece); set => _slots[EquipmentSlots.ChestPiece] = value; }
-    public Equipment Leggings   { get => Get(EquipmentSlots.Leggings);   set => _slots[EquipmentSlots.Leggings] = value; }
-    public Equipment Booties    { get => Get(EquipmentSlots.Booties);    set => _slots[EquipmentSlots.Booties] = value; }
-    public Equipment Ring       { get => Get(EquipmentSlots.Ring);       set => _slots[EquipmentSlots.Ring] = value; }
-    public Equipment Necklace   { get => Get(EquipmentSlots.Necklace);   set => _slots[EquipmentSlots.Necklace] = value; }
-    public Equipment Weapon     { get => Get(EquipmentSlots.Weapon);     set => _slots[EquipmentSlots.Weapon] = value; }
+    // These let SaveSystem still access individual slots by name. Setters
+    // route through SetSlot so the cached totals stay in sync.
+    public Equipment HeadPiece  { get => Get(EquipmentSlots.HeadPiece);  set => SetSlot(EquipmentSlots.HeadPiece,  value); }
+    public Equipment ChestPiece { get => Get(EquipmentSlots.ChestPiece); set => SetSlot(EquipmentSlots.ChestPiece, value); }
+    public Equipment Leggings   { get => Get(EquipmentSlots.Leggings);   set => SetSlot(EquipmentSlots.Leggings,   value); }
+    public Equipment Booties    { get => Get(EquipmentSlots.Booties);    set => SetSlot(EquipmentSlots.Booties,    value); }
+    public Equipment Ring       { get => Get(EquipmentSlots.Ring);       set => SetSlot(EquipmentSlots.Ring,       value); }
+    public Equipment Necklace   { get => Get(EquipmentSlots.Necklace);   set => SetSlot(EquipmentSlots.Necklace,   value); }
+    public Equipment Weapon     { get => Get(EquipmentSlots.Weapon);     set => SetSlot(EquipmentSlots.Weapon,     value); }
+
+    private void SetSlot(EquipmentSlots slot, Equipment value)
+    {
+        _slots[slot] = value;
+        RecomputeTotals();
+    }
+
+    /// <summary>
+    /// Walk the 7 slots once and refresh every cached total. Called from
+    /// the constructor, Equip(), and the save-compat setters.
+    /// foreach over Dictionary.Values uses the struct enumerator — no
+    /// boxing, no delegate allocation.
+    /// </summary>
+    private void RecomputeTotals()
+    {
+        int h = 0, a = 0, m = 0, d = 0, p = 0, s = 0;
+        foreach (var e in _slots.Values)
+        {
+            if (e == null) continue;
+            h += e.HealthBonus;
+            a += e.AttackBonus;
+            m += e.MagicBonus;
+            d += e.DefenseBonus;
+            p += e.ProtectionBonus;
+            s += e.SpeedBoost;
+        }
+        _totalHealth = h;
+        _totalAttack = a;
+        _totalMagic = m;
+        _totalDefense = d;
+        _totalProtection = p;
+        _totalSpeed = s;
+    }
 }

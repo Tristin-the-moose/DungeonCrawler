@@ -62,6 +62,7 @@ public static class DrawHelpers
     ///   2 blue   – 2 bonuses
     ///   3 purple – 3 bonuses
     ///   4 yellow – 4 bonuses
+    ///   5 red    - cursed item
     /// </summary>
     public static Color GetRarityColor(int rarity) => rarity switch
     {
@@ -70,6 +71,7 @@ public static class DrawHelpers
         2 => Color.CornflowerBlue,
         3 => Color.MediumPurple,
         4 => Color.Gold,
+        5 => Color.DarkRed,
         _ => Color.White
     };
 }

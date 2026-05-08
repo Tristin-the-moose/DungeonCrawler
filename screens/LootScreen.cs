@@ -52,15 +52,14 @@ public class LootScreen : IGameScreen
             return;
         }
 
-        // Check S *before* UpdateHorizontal so WasPressed compares against
-        // the previous frame's keyboard state, not the one about to be stored.
+        // Advance the menu's keyboard snapshot first, then check extra keys.
+        _menu.UpdateHorizontal();
+
         if (_menu.WasPressed(Keys.S))
         {
             GoToVictory();
             return;
         }
-
-        _menu.UpdateHorizontal();
 
         if (_menu.Confirmed)
         {
@@ -122,12 +121,9 @@ public class LootScreen : IGameScreen
 
     private static string CompareGear(Equipment newItem, Equipment current)
     {
-        int diff = (newItem.AttackBonus - current.AttackBonus)
-                 + (newItem.DefenseBonus - current.DefenseBonus)
-                 + (newItem.SpeedBoost - current.SpeedBoost)
-                 + (newItem.MagicBonus - current.MagicBonus)
-                 + (newItem.HealthBonus - current.HealthBonus);
-
+        // Use Equipment.TotalStats so this matches LootFactory.IsUpgrade and
+        // automatically picks up any new stat bonuses added to the model.
+        int diff = newItem.TotalStats - current.TotalStats;
         if (diff > 0) return $"+{diff} total stats";
         if (diff < 0) return $"{diff} total stats";
         return "Same";

@@ -20,18 +20,21 @@ public class BattleAction
     public Fighter Source { get; set; }
     public Fighter Target { get; set; }
 
-    public string[] Execute(Random rng)
+    /// <summary>
+    /// Run the action, emitting each log line through <paramref name="log"/>.
+    /// Callers should pass a cached delegate so this stays allocation-free.
+    /// </summary>
+    public void Execute(Random rng, Action<string> log)
     {
-        return Type switch
+        switch (Type)
         {
-            BattleActionType.Attack => ExecuteAttack(rng),
-            BattleActionType.Defend => ExecuteDefend(),
-            BattleActionType.Heal   => new[] { ExecuteHeal() },
-            _ => new[] { "" }
-        };
+            case BattleActionType.Attack: ExecuteAttack(rng, log); break;
+            case BattleActionType.Defend: ExecuteDefend(log);      break;
+            case BattleActionType.Heal:   ExecuteHeal(log);        break;
+        }
     }
 
-    private string[] ExecuteAttack(Random rng)
+    private void ExecuteAttack(Random rng, Action<string> log)
     {
         var cfg = GameConfig.Instance;
         int atk, def;
@@ -62,7 +65,7 @@ public class BattleAction
             Target.TriggerFlash();
 
             string critTag = isCrit ? " CRITICAL HIT!" : "";
-            string attackMsg = $"{Source.Stats.Name} {verb} {Target.Stats.Name}!{critTag} (blocked)";
+            log($"{Source.Stats.Name} {verb} {Target.Stats.Name}!{critTag} (blocked)");
 
             // Counter-attack (uses defender's speed for crit calc).
             // The counter-attacker is `Target`; whether it's magic depends on the
@@ -76,9 +79,8 @@ public class BattleAction
             Source.TriggerFlash();
 
             string counterVerb = Target.UsesMagicAttack ? "retaliates with a spell" : "counter-attacks";
-            string counterMsg = $"{Target.Stats.Name} {counterVerb}!";
-
-            return new[] { attackMsg, counterMsg };
+            log($"{Target.Stats.Name} {counterVerb}!");
+            return;
         }
 
         // Normal attack
@@ -86,23 +88,26 @@ public class BattleAction
         Target.TriggerFlash();
 
         string tag = isCrit ? " CRITICAL HIT!" : "";
-        return new[] { $"{Source.Stats.Name} {verb} {Target.Stats.Name}!{tag}" };
+        log($"{Source.Stats.Name} {verb} {Target.Stats.Name}!{tag}");
     }
 
-    private string[] ExecuteDefend()
+    private void ExecuteDefend(Action<string> log)
     {
         var cfg = GameConfig.Instance;
         Source.DefendBuff += cfg.DefendBoost;
         Source.IsDefending = true;
-        return new[] { $"{Source.Stats.Name} takes a defensive stance!" };
+        log($"{Source.Stats.Name} takes a defensive stance!");
     }
 
-    private string ExecuteHeal()
+    private void ExecuteHeal(Action<string> log)
     {
         var cfg = GameConfig.Instance;
 
         if (!Source.CanHeal)
-            return $"{Source.Stats.Name} tries to heal but it's not ready! ({Source.HealCooldown} turns)";
+        {
+            log($"{Source.Stats.Name} tries to heal but it's not ready! ({Source.HealCooldown} turns)");
+            return;
+        }
 
         // Heal a flat percentage of effective max HP (50% by default).
         // Future heal-power boosts can be layered on top of this base value.
@@ -112,7 +117,7 @@ public class BattleAction
         // Start cooldown
         Source.HealCooldown = cfg.HealCooldownTurns;
 
-        return $"{Source.Stats.Name} heals!";
+        log($"{Source.Stats.Name} heals!");
     }
 
     /// <summary>

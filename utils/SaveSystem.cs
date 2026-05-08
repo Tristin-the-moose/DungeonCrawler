@@ -93,14 +93,17 @@ public class SaveData
             data.MapPlayerX = map.PlayerX;
             data.MapPlayerY = map.PlayerY;
 
-            var rooms = new List<RoomSaveData>(map.Width * map.Height);
+            // Size is known up-front, so write straight into the result array
+            // instead of going via a List + ToArray copy.
+            var rooms = new RoomSaveData[map.Width * map.Height];
+            int idx = 0;
             for (int x = 0; x < map.Width; x++)
                 for (int y = 0; y < map.Height; y++)
                 {
                     var r = map.GetRoom(x, y);
-                    rooms.Add(new RoomSaveData { X = x, Y = y, Type = r.Type, State = r.State });
+                    rooms[idx++] = new RoomSaveData { X = x, Y = y, Type = r.Type, State = r.State };
                 }
-            data.MapRooms = rooms.ToArray();
+            data.MapRooms = rooms;
         }
 
         return data;

@@ -4,7 +4,9 @@
     <TargetFramework>net9.0</TargetFramework>
     <RollForward>Major</RollForward>
     <PublishReadyToRun>false</PublishReadyToRun>
-    <TieredCompilation>false</TieredCompilation>
+    <!-- Accept `?` reference annotations without emitting flow-analysis warnings.
+         The existing code uses `Func<IGameScreen>?`, `DungeonMap?`, etc. -->
+    <Nullable>annotations</Nullable>
   </PropertyGroup>
   <PropertyGroup>
     <ApplicationManifest>app.manifest</ApplicationManifest>

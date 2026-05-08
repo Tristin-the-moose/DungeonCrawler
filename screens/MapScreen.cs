@@ -31,11 +31,26 @@ public class MapScreen : IGameScreen
     // ── Cursor state ─────────────────────────────────────────
     private int _cursorX;
     private int _cursorY;
-    private KeyboardState _prevKb;
+    private readonly KeyboardWatcher _kb = new();
 
     // ── Feedback flash (e.g. can't enter that room) ──────────
     private string _flashMsg   = "";
     private float  _flashTimer = 0f;
+
+    // ── Constant-string measurements (cached once per font) ──
+    private static readonly (string Label, Color Color)[] LegendEntries =
+    {
+        ("BATTLE",  new Color(160, 160, 170)),
+        ("ELITE",   new Color(255, 160,  30)),
+        ("BOSS",    new Color(220,  50,  50)),
+        ("CHEST",   new Color(255, 210,  40)),
+        ("REST",    new Color(60,  200,  80)),
+        ("EXIT",    new Color(80,  220, 220)),
+    };
+    private static float[]         _legendWidths;
+    private static float           _legendTotalWidth;
+    private static float           _youWidth;
+    private static SpriteFontBase  _measureFont;
 
     public MapScreen(GameContext ctx, Action<IGameScreen> setScreen)
     {
@@ -45,8 +60,6 @@ public class MapScreen : IGameScreen
         // Cursor starts at the player's current position
         _cursorX = _ctx.CurrentMap.PlayerX;
         _cursorY = _ctx.CurrentMap.PlayerY;
-
-        _prevKb = Keyboard.GetState();
     }
 
     // ── Update ───────────────────────────────────────────────
@@ -54,33 +67,31 @@ public class MapScreen : IGameScreen
     {
         if (_flashTimer > 0f) _flashTimer -= dt;
 
-        var kb  = Keyboard.GetState();
+        _kb.Update();
         var map = _ctx.CurrentMap;
 
         // Cursor movement: bounded by the grid AND prevented from sliding onto
         // Hidden rooms, since those aren't drawn — the cursor would appear to
         // vanish into unexplored space.
-        if (WasPressed(kb, Keys.Up)    && _cursorY > 0              && map.GetRoom(_cursorX, _cursorY - 1).IsVisible) _cursorY--;
-        if (WasPressed(kb, Keys.Down)  && _cursorY < map.Height - 1 && map.GetRoom(_cursorX, _cursorY + 1).IsVisible) _cursorY++;
-        if (WasPressed(kb, Keys.Left)  && _cursorX > 0              && map.GetRoom(_cursorX - 1, _cursorY).IsVisible) _cursorX--;
-        if (WasPressed(kb, Keys.Right) && _cursorX < map.Width  - 1 && map.GetRoom(_cursorX + 1, _cursorY).IsVisible) _cursorX++;
+        if (_kb.WasPressed(Keys.Up)    && _cursorY > 0              && map.GetRoom(_cursorX, _cursorY - 1).IsVisible) _cursorY--;
+        if (_kb.WasPressed(Keys.Down)  && _cursorY < map.Height - 1 && map.GetRoom(_cursorX, _cursorY + 1).IsVisible) _cursorY++;
+        if (_kb.WasPressed(Keys.Left)  && _cursorX > 0              && map.GetRoom(_cursorX - 1, _cursorY).IsVisible) _cursorX--;
+        if (_kb.WasPressed(Keys.Right) && _cursorX < map.Width  - 1 && map.GetRoom(_cursorX + 1, _cursorY).IsVisible) _cursorX++;
 
         // Confirm — try to enter the room at cursor
-        if (WasPressed(kb, Keys.Enter) || WasPressed(kb, Keys.Space))
+        if (_kb.WasPressed(Keys.Enter) || _kb.WasPressed(Keys.Space))
             TryEnterRoom(_cursorX, _cursorY);
 
         // Stats shortcut
-        if (WasPressed(kb, Keys.Tab))
+        if (_kb.WasPressed(Keys.Tab))
             _setScreen(new StatsScreen(_ctx, _setScreen, this));
 
         // Save & quit to title (Escape) — include map so the floor is restored on continue
-        if (WasPressed(kb, Keys.Escape))
+        if (_kb.WasPressed(Keys.Escape))
         {
             SaveSystem.Save(_ctx.Player, _ctx.Depth, _ctx.CurrentMap);
             _setScreen(new TitleScreen(_ctx, _setScreen));
         }
-
-        _prevKb = kb;
     }
 
     private void TryEnterRoom(int tx, int ty)
@@ -179,6 +190,10 @@ public class MapScreen : IGameScreen
     // ── Draw ─────────────────────────────────────────────────
     public void Draw(SpriteBatch sb)
     {
+        // Refresh constant-string measurements once per frame (no-op after
+        // the first call unless the font reference changes).
+        EnsureCachedMeasurements(Game1.Resources.Font);
+
         DrawHeader(sb);
         DrawGrid(sb);
         DrawLegend(sb);
@@ -299,11 +314,11 @@ public class MapScreen : IGameScreen
                     new Vector2(rx + (RoomW - textSize.X) / 2, ry + (RoomH - textSize.Y) / 2),
                     labelColor);
 
-                // "YOU" marker on current room
+                // "YOU" marker on current room (width cached by EnsureCachedMeasurements)
                 if (isCurrent)
                 {
                     sb.DrawString(font, "YOU",
-                        new Vector2(rx + (RoomW - font.MeasureString("YOU").X) / 2, ry + 4),
+                        new Vector2(rx + (RoomW - _youWidth) / 2, ry + 4),
                         Color.White);
                 }
 
@@ -323,34 +338,39 @@ public class MapScreen : IGameScreen
         int y = OriginY + _ctx.CurrentMap.Height * (RoomH + GapY) + 14;
         var font = Game1.Resources.Font;
 
-        (string label, Color color)[] entries =
+        float lx = (Game1.ScreenW - _legendTotalWidth) / 2;
+        for (int i = 0; i < LegendEntries.Length; i++)
         {
-            ("BATTLE",  new Color(160, 160, 170)),
-            ("ELITE",   new Color(255, 160,  30)),
-            ("BOSS",    new Color(220,  50,  50)),
-            ("CHEST",   new Color(255, 210,  40)),
-            ("REST",    new Color(60,  200,  80)),
-            ("EXIT",    new Color(80,  220, 220)),
-        };
-
-        // Compute total legend width and centre it
-        float totalW = 0;
-        foreach (var (lbl, _) in entries)
-            totalW += font.MeasureString(lbl).X + 24;
-        totalW -= 12; // remove trailing gap
-
-        float lx = (Game1.ScreenW - totalW) / 2;
-
-        foreach (var (lbl, col) in entries)
-        {
-            sb.DrawString(font, lbl, new Vector2(lx, y), col);
-            lx += font.MeasureString(lbl).X + 24;
+            sb.DrawString(font, LegendEntries[i].Label, new Vector2(lx, y), LegendEntries[i].Color);
+            lx += _legendWidths[i] + 24;
         }
 
         // Controls hint
         DrawHelpers.CenterText(sb,
             "Arrows: move cursor   Enter: enter room   Tab: stats   Esc: save & quit",
             y + 26, new Color(70, 70, 70));
+    }
+
+    /// <summary>
+    /// Measure constant strings (legend labels + the "YOU" marker) once per
+    /// font. The font reference doesn't change during a session, so this
+    /// only runs on the first draw.
+    /// </summary>
+    private static void EnsureCachedMeasurements(SpriteFontBase font)
+    {
+        if (_measureFont == font && _legendWidths != null) return;
+
+        _measureFont = font;
+        _legendWidths = new float[LegendEntries.Length];
+        float total = 0;
+        for (int i = 0; i < LegendEntries.Length; i++)
+        {
+            float w = font.MeasureString(LegendEntries[i].Label).X;
+            _legendWidths[i] = w;
+            total += w + 24;
+        }
+        _legendTotalWidth = total - 12; // remove trailing gap
+        _youWidth = font.MeasureString("YOU").X;
     }
 
     private void DrawFlash(SpriteBatch sb)
@@ -368,6 +388,4 @@ public class MapScreen : IGameScreen
         _flashTimer = 1.4f;
     }
 
-    private bool WasPressed(KeyboardState current, Keys key) =>
-        current.IsKeyDown(key) && _prevKb.IsKeyUp(key);
 }

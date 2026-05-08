@@ -32,8 +32,14 @@ public class Game1 : Game
     public static int ScreenW { get; private set; }
     public static int ScreenH { get; private set; }
 
+    // Lets non-Game classes (e.g. TitleScreen) trigger a graceful exit so
+    // MonoGame still runs UnloadContent and GameLogger.Shutdown.
+    public static Action ExitRequest { get; private set; } = () => { };
+
     public Game1()
     {
+        ExitRequest = Exit;
+
         var cfg = GameConfig.Instance;
         ScreenW = cfg.ScreenWidth;
         ScreenH = cfg.ScreenHeight;

@@ -29,13 +29,13 @@ public class TitleScreen : IGameScreen
             _options.Add(("Continue",  Color.LimeGreen,    ContinueGame));
             _options.Add(("New Game",  Color.White,        StartNewGame));
             _options.Add(("Settings",  Color.MediumPurple, OpenSettings));
-            _options.Add(("Exit",      Color.Gray,         () => Environment.Exit(0)));
+            _options.Add(("Exit",      Color.Gray,         Game1.ExitRequest));
         }
         else
         {
             _options.Add(("Start Game", Color.White,        StartNewGame));
             _options.Add(("Settings",   Color.MediumPurple, OpenSettings));
-            _options.Add(("Exit",       Color.Gray,         () => Environment.Exit(0)));
+            _options.Add(("Exit",       Color.Gray,         Game1.ExitRequest));
         }
 
         _menu = new MenuSelector(_options.Count);
