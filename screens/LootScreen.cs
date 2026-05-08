@@ -23,16 +23,20 @@ public class LootScreen : IGameScreen
     /// <summary>
     /// <paramref name="afterLoot"/> is called once the player picks or skips loot.
     /// Defaults to <see cref="VictoryScreen"/> when null (backwards-compatible).
+    /// <paramref name="context"/> controls reroll behaviour and rarity boosts —
+    /// see <see cref="LootContext"/>.
     /// </summary>
     public LootScreen(
         GameContext         ctx,
         Action<IGameScreen> setScreen,
-        Func<IGameScreen>?  afterLoot = null)
+        Func<IGameScreen>?  afterLoot = null,
+        LootContext         context   = LootContext.Battle)
     {
         _ctx         = ctx;
         _setScreen   = setScreen;
         _afterLoot   = afterLoot;
-        _lootChoices = LootFactory.GenerateChoices(ctx.Depth.CurrentDepth, ctx.Rng, ctx.Player.Equipment);
+        _lootChoices = LootFactory.GenerateChoices(
+            ctx.Depth.CurrentDepth, ctx.Rng, ctx.Player.Equipment, context);
         // Guard MenuSelector against an empty loot list — Update will
         // immediately bail to GoToVictory before any indexing happens.
         _menu        = new MenuSelector(Math.Max(1, _lootChoices?.Length ?? 0));

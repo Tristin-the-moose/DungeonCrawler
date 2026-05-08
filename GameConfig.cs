@@ -111,6 +111,16 @@ public class GameConfig
     public float LootScaleExponent { get; set; } = 1.8f;
     public float LootScaleMultiplier { get; set; } = 2.5f;
 
+    // Boss-room loot perks — chance per item to roll a guaranteed yellow.
+    // Total chance = BossYellowBaseChance + depth * BossYellowDepthBonus (capped naturally by RNG range).
+    public int BossYellowBaseChance { get; set; } = 10;  // % chance at depth 0
+    public int BossYellowDepthBonus { get; set; } = 5;   // additional % per depth
+
+    // Treasure-chest loot perks — chance per item to floor the rarity at purple.
+    // (A natural yellow roll still wins — this only raises the floor.)
+    public int TreasurePurpleBaseChance { get; set; } = 20;  // % chance at depth 0
+    public int TreasurePurpleDepthBonus { get; set; } = 5;   // additional % per depth
+
     // ════════════════════════════════════════════
     //  LOAD / SAVE / GENERATE
     // ════════════════════════════════════════════

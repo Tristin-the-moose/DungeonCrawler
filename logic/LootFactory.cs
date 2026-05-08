@@ -9,6 +9,18 @@ using DungeonCrawler.models;
 
 namespace DungeonCrawler.logic;
 
+/// <summary>
+/// What kind of fight or pickup produced this loot pool.
+/// Drives reroll behaviour and rarity boosts in <see cref="LootFactory.GenerateChoices"/>.
+/// </summary>
+public enum LootContext
+{
+    Battle,    // Standard fight: 3 random items, no reroll guarantee
+    Elite,     // Elite fight: reroll until at least one item is an upgrade
+    Boss,      // Boss fight: reroll for upgrade AND boosted chance at yellows
+    Treasure   // Chest: depth-scaled chance at minimum purple, no reroll
+}
+
 public static class LootFactory
 {
     private static readonly Dictionary<EquipmentSlots, string[][]> NameTables = new()
@@ -65,34 +77,43 @@ public static class LootFactory
     };
 
     /// <summary>
-    /// Generate loot choices with guaranteed variety and at least one upgrade.
+    /// Generate loot choices with unique slots. Reroll behaviour depends on
+    /// <paramref name="context"/>:
+    ///   • Battle   – pure random, no upgrade guarantee.
+    ///   • Elite    – reroll the first item until at least one choice is an upgrade.
+    ///   • Boss     – same as Elite + a depth-scaled chance for items to roll yellow.
+    ///   • Treasure – reroll for upgrade + a depth-scaled chance to floor at purple.
     /// </summary>
-    public static Equipment[] GenerateChoices(int depth, Random rng, EquipmentSet currentGear = null)
+    public static Equipment[] GenerateChoices(
+        int depth, Random rng,
+        EquipmentSet currentGear = null,
+        LootContext context      = LootContext.Battle)
     {
         var cfg = GameConfig.Instance;
         int count = cfg.LootChoiceCount;
 
         // 1. Pick unique slots so you never see 3 helmets
-        var allSlots = Enum.GetValues<EquipmentSlots>();
-        var shuffled = allSlots.OrderBy(_ => rng.Next()).ToArray();
+        var allSlots    = Enum.GetValues<EquipmentSlots>();
+        var shuffled    = allSlots.OrderBy(_ => rng.Next()).ToArray();
         var chosenSlots = shuffled.Take(count).ToArray();
 
-        // 2. Generate one item per slot
+        // 2. Generate one item per slot, honouring the context's rarity rules
         var choices = new Equipment[count];
         for (int i = 0; i < count; i++)
-            choices[i] = GenerateDrop(depth, rng, chosenSlots[i]);
+            choices[i] = GenerateDrop(depth, rng, chosenSlots[i], context);
 
-        // 3. Guarantee at least one upgrade if player gear is known
-        if (currentGear != null)
+        // 3. Reroll-for-upgrade for any "premium" context (Elite, Boss, Treasure).
+        bool guaranteeUpgrade = context == LootContext.Elite
+                             || context == LootContext.Boss
+                             || context == LootContext.Treasure;
+        if (guaranteeUpgrade && currentGear != null)
         {
             bool hasUpgrade = choices.Any(item => IsUpgrade(item, currentGear));
-
             if (!hasUpgrade)
             {
-                // Re-roll the first item until it's an upgrade (with a safety cap)
                 for (int attempt = 0; attempt < cfg.MaxRerollAttempts; attempt++)
                 {
-                    choices[0] = GenerateDrop(depth, rng, chosenSlots[0]);
+                    choices[0] = GenerateDrop(depth, rng, chosenSlots[0], context);
                     if (IsUpgrade(choices[0], currentGear))
                         break;
                 }
@@ -104,33 +125,40 @@ public static class LootFactory
 
     /// <summary>
     /// Generate a single equipment drop for a specific slot.
+    /// Rarity drives both colour and the number of stat bonuses the item carries
+    /// (white 0 → yellow 4). See <see cref="SlotStatPools"/>.
     /// </summary>
-    public static Equipment GenerateDrop(int depth, Random rng, EquipmentSlots? forceSlot = null)
+    public static Equipment GenerateDrop(
+        int depth, Random rng,
+        EquipmentSlots? forceSlot = null,
+        LootContext context       = LootContext.Battle)
     {
-        var cfg = GameConfig.Instance;
+        var cfg  = GameConfig.Instance;
         var slot = forceSlot ?? RandomSlot(rng);
 
-        // Weighted tier roll — deeper floors have better odds at higher tiers
-        int tier = RollTier(depth, rng, cfg);
+        // Weighted rarity roll — deeper floors weight toward higher rarities (= more bonuses).
+        // Boss context layers an extra depth-scaled chance to roll a guaranteed yellow.
+        int rarity = RollRarity(depth, rng, cfg, context);
 
         var item = new Equipment
         {
-            Name = PickName(slot, tier, rng),
+            Name          = PickName(slot, rarity, rng),
             EquipmentType = slot,
-            Rarity = tier + 1
+            Rarity        = rarity
         };
 
-        // Exponential base value: baseVal = base + multiplier * tier^exponent + random
-        // Tier 0: ~2, Tier 1: ~7, Tier 2: ~11, Tier 3: ~19, Tier 4: ~30+
-        float scaled = cfg.LootScaleMultiplier * MathF.Pow(tier, cfg.LootScaleExponent);
-        int baseVal = cfg.LootBaseStatValue + (int)scaled + rng.Next(0, tier + 2);
+        // Pick the weapon type up-front so the weapon stat pool is selectable
+        // and the name reflects the actual weapon.
+        if (slot == EquipmentSlots.Weapon)
+        {
+            item.Weapon = (WeaponType)rng.Next(5);
+            item.Name   = PickWeaponName(item.Weapon.Value, rarity, rng);
+        }
 
-        // Cursed item check — high primary stat but a penalty elsewhere
-        bool isCursed = rng.Next(100) < cfg.CursedLootChance;
-        if (isCursed)
-            baseVal = (int)(baseVal * 1.6f);  // Boosted primary stat
+        // Cursed: only meaningful on items that have at least one bonus to boost.
+        bool isCursed = rarity > 0 && rng.Next(100) < cfg.CursedLootChance;
 
-        ApplySlotBonuses(item, slot, baseVal, tier, rng);
+        ApplyBonuses(item, rarity, rng, isCursed);
 
         if (isCursed)
         {
@@ -138,36 +166,56 @@ public static class LootFactory
             item.Name = "Cursed " + item.Name;
         }
 
-        // Weapon type override for weapon-slot items
-        if (slot == EquipmentSlots.Weapon && item.Weapon.HasValue)
-            item.Name = isCursed ? "Cursed " + PickWeaponName(item.Weapon.Value, tier, rng)
-                                 : PickWeaponName(item.Weapon.Value, tier, rng);
-
         return item;
     }
 
     /// <summary>
-    /// Weighted tier roll. Higher depths shift the probability toward rarer tiers.
-    /// Tier 0 = Common, 1 = Uncommon, 2 = Rare, 3 = Epic, 4 = Legendary
+    /// Weighted rarity roll. Higher depths shift the probability toward rarer tiers.
+    /// Rarity 0 = White (junk), 1 = Green, 2 = Blue, 3 = Purple, 4 = Yellow.
+    ///
+    /// After the normal weighted roll, the context can enforce a minimum rarity:
+    ///   • Boss     – depth-scaled chance to lock in yellow.
+    ///   • Treasure – depth-scaled chance to floor at purple (still allowed to
+    ///                roll up to yellow on the normal path).
     /// </summary>
-    private static int RollTier(int depth, Random rng, GameConfig cfg)
+    private static int RollRarity(int depth, Random rng, GameConfig cfg, LootContext context)
     {
-        // Base tier from depth
-        int baseTier = Math.Clamp((depth - 1) / cfg.LootTierDivisor, 0, cfg.LootMaxTier);
+        // 1. Base depth-driven weighted roll
+        int baseRarity = Math.Clamp((depth - 1) / cfg.LootTierDivisor, 0, cfg.LootMaxTier);
 
-        // Roll: 50% base tier, 30% base-1, 15% base+1, 5% base+2
         int roll = rng.Next(100);
-        int tier;
+        int rarity;
         if (roll < 50)
-            tier = baseTier;
+            rarity = baseRarity;
         else if (roll < 80)
-            tier = baseTier - 1;
+            rarity = baseRarity - 1;
         else if (roll < 95)
-            tier = baseTier + 1;
+            rarity = baseRarity + 1;
         else
-            tier = baseTier + 2;
+            rarity = baseRarity + 2;
 
-        return Math.Clamp(tier, 0, cfg.LootMaxTier);
+        rarity = Math.Clamp(rarity, 0, cfg.LootMaxTier);
+
+        // 2. Context-specific minimum-rarity boosts
+        switch (context)
+        {
+            case LootContext.Boss:
+            {
+                int yellowChance = cfg.BossYellowBaseChance + depth * cfg.BossYellowDepthBonus;
+                if (rng.Next(100) < yellowChance)
+                    rarity = cfg.LootMaxTier; // Yellow
+                break;
+            }
+            case LootContext.Treasure:
+            {
+                int purpleChance = cfg.TreasurePurpleBaseChance + depth * cfg.TreasurePurpleDepthBonus;
+                if (rng.Next(100) < purpleChance)
+                    rarity = Math.Max(rarity, 3); // At least Purple — natural Yellow rolls survive.
+                break;
+            }
+        }
+
+        return rarity;
     }
 
     /// <summary>
@@ -201,60 +249,80 @@ public static class LootFactory
         return slots[rng.Next(slots.Length)];
     }
 
-    private static void ApplySlotBonuses(Equipment item, EquipmentSlots slot,
-                                          int baseVal, int tier, Random rng)
+    // ── Stat pools ──────────────────────────────────────────
+    // The first entry in each list is the slot's identity stat (rolled first
+    // and gets the largest value). Subsequent entries are added in order as
+    // rarity climbs — yellow items (rarity 4) roll the first 4 entries.
+    private enum StatKey { Health, Attack, Magic, Defense, Protection, Speed }
+
+    private static readonly Dictionary<EquipmentSlots, StatKey[]> SlotStatPools = new()
     {
-        switch (slot)
+        [EquipmentSlots.HeadPiece]  = new[] { StatKey.Health,  StatKey.Defense, StatKey.Magic,      StatKey.Protection },
+        [EquipmentSlots.ChestPiece] = new[] { StatKey.Defense, StatKey.Health,  StatKey.Protection, StatKey.Magic      },
+        [EquipmentSlots.Leggings]   = new[] { StatKey.Defense, StatKey.Speed,   StatKey.Health,     StatKey.Protection },
+        [EquipmentSlots.Booties]    = new[] { StatKey.Speed,   StatKey.Defense, StatKey.Health,     StatKey.Protection },
+        [EquipmentSlots.Ring]       = new[] { StatKey.Magic,   StatKey.Attack,  StatKey.Defense,    StatKey.Speed      },
+        [EquipmentSlots.Necklace]   = new[] { StatKey.Health,  StatKey.Magic,   StatKey.Protection, StatKey.Defense    },
+    };
+
+    private static readonly Dictionary<WeaponType, StatKey[]> WeaponStatPools = new()
+    {
+        [WeaponType.Sword]  = new[] { StatKey.Attack, StatKey.Defense, StatKey.Speed,   StatKey.Health     },
+        [WeaponType.Dagger] = new[] { StatKey.Attack, StatKey.Speed,   StatKey.Defense, StatKey.Health     },
+        [WeaponType.Staff]  = new[] { StatKey.Magic,  StatKey.Health,  StatKey.Speed,   StatKey.Protection },
+        [WeaponType.Wand]   = new[] { StatKey.Magic,  StatKey.Speed,   StatKey.Health,  StatKey.Protection },
+        [WeaponType.Mace]   = new[] { StatKey.Attack, StatKey.Defense, StatKey.Health,  StatKey.Speed      },
+    };
+
+    /// <summary>
+    /// Roll <paramref name="rarity"/> stat bonuses onto the item, in pool order.
+    /// The primary stat takes the full base value; secondaries decay so the
+    /// item still has a clear identity.
+    /// </summary>
+    private static void ApplyBonuses(Equipment item, int rarity, Random rng, bool isCursed)
+    {
+        if (rarity <= 0) return;     // White items carry zero bonuses.
+
+        StatKey[] pool;
+        if (item.EquipmentType == EquipmentSlots.Weapon && item.Weapon.HasValue)
+            pool = WeaponStatPools[item.Weapon.Value];
+        else if (!SlotStatPools.TryGetValue(item.EquipmentType, out pool))
+            return;
+
+        int bonusCount = Math.Min(rarity, pool.Length);
+        for (int i = 0; i < bonusCount; i++)
         {
-            case EquipmentSlots.HeadPiece:
-                item.HealthBonus = baseVal;
-                item.MagicBonus = rng.Next(0, tier * 2 + 1);
-                break;
-            case EquipmentSlots.ChestPiece:
-                item.DefenseBonus = baseVal;
-                item.HealthBonus = rng.Next(1, tier * 2 + 2);
-                break;
-            case EquipmentSlots.Leggings:
-                item.DefenseBonus = (int)(baseVal * 0.7f);
-                item.SpeedBoost = rng.Next(0, tier * 2 + 1);
-                break;
-            case EquipmentSlots.Booties:
-                item.SpeedBoost = baseVal;
-                item.DefenseBonus = rng.Next(0, tier * 2 + 1);
-                break;
-            case EquipmentSlots.Weapon:
-                var weaponType = (WeaponType)rng.Next(5);
-                item.Weapon = weaponType;
-                switch (weaponType)
-                {
-                    case WeaponType.Sword:
-                        item.AttackBonus = baseVal;
-                        break;
-                    case WeaponType.Dagger:
-                        item.AttackBonus = (int)(baseVal * 0.7f);
-                        item.SpeedBoost = rng.Next(1, tier * 2 + 3);
-                        break;
-                    case WeaponType.Staff:
-                        item.MagicBonus = baseVal;
-                        break;
-                    case WeaponType.Wand:
-                        item.MagicBonus = (int)(baseVal * 0.7f);
-                        item.SpeedBoost = rng.Next(1, tier * 2 + 3);
-                        break;
-                    case WeaponType.Mace:
-                        item.AttackBonus = (int)(baseVal * 0.7f);
-                        item.DefenseBonus = rng.Next(1, tier * 2 + 3);
-                        break;
-                }
-                break;
-            case EquipmentSlots.Ring:
-                item.MagicBonus = baseVal;
-                item.AttackBonus = rng.Next(0, tier * 2 + 1);
-                break;
-            case EquipmentSlots.Necklace:
-                item.HealthBonus = baseVal;
-                item.ProtectionBonus = rng.Next(0, tier * 2 + 1);
-                break;
+            int value = ComputeStatValue(rarity, i, rng);
+            if (i == 0 && isCursed) value = (int)(value * 1.6f);
+            AddStat(item, pool[i], value);
+        }
+    }
+
+    /// <summary>
+    /// Exponential base value, identical scaling to the old tier formula:
+    ///   baseVal = LootBaseStatValue + LootScaleMultiplier · rarity^LootScaleExponent + small random
+    /// Secondary stats (statIndex > 0) decay so the primary remains the highlight.
+    /// </summary>
+    private static int ComputeStatValue(int rarity, int statIndex, Random rng)
+    {
+        var cfg = GameConfig.Instance;
+        float scaled = cfg.LootScaleMultiplier * MathF.Pow(rarity, cfg.LootScaleExponent);
+        int baseVal  = cfg.LootBaseStatValue + (int)scaled + rng.Next(0, rarity + 2);
+
+        if (statIndex == 0) return baseVal;
+        return Math.Max(1, (int)(baseVal * Math.Pow(0.6, statIndex)));
+    }
+
+    private static void AddStat(Equipment item, StatKey key, int value)
+    {
+        switch (key)
+        {
+            case StatKey.Health:     item.HealthBonus     += value; break;
+            case StatKey.Attack:     item.AttackBonus     += value; break;
+            case StatKey.Magic:      item.MagicBonus      += value; break;
+            case StatKey.Defense:    item.DefenseBonus    += value; break;
+            case StatKey.Protection: item.ProtectionBonus += value; break;
+            case StatKey.Speed:      item.SpeedBoost      += value; break;
         }
     }
 

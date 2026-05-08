@@ -56,15 +56,20 @@ public static class DrawHelpers
 
     /// <summary>
     /// Returns a color based on equipment rarity tier.
-    /// Centralizes the rarity → color mapping (was duplicated in original).
+    /// Rarity also controls how many stat bonuses an item rolls in LootFactory:
+    ///   0 white  – 0 bonuses (default / starter gear)
+    ///   1 green  – 1 bonus
+    ///   2 blue   – 2 bonuses
+    ///   3 purple – 3 bonuses
+    ///   4 yellow – 4 bonuses
     /// </summary>
     public static Color GetRarityColor(int rarity) => rarity switch
     {
-        0 => Color.Gray,
-        1 => Color.White,
-        2 => Color.LimeGreen,
-        3 => Color.CornflowerBlue,
+        0 => Color.White,
+        1 => Color.LimeGreen,
+        2 => Color.CornflowerBlue,
+        3 => Color.MediumPurple,
         4 => Color.Gold,
-        _ => Color.Gray
+        _ => Color.White
     };
 }

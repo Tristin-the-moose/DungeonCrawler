@@ -18,6 +18,7 @@ public class BattleScreen : IGameScreen
     private readonly BattleSystem        _battle;
     private readonly MenuSelector        _menu;
     private readonly Func<IGameScreen>?  _afterBattle;
+    private readonly RoomType            _roomType;
 
     // Menu options: 3 battle actions + View Stats
     private enum MenuOption { Attack, Defend, Heal, Stats }
@@ -43,6 +44,7 @@ public class BattleScreen : IGameScreen
         _ctx         = ctx;
         _setScreen   = setScreen;
         _afterBattle = afterBattle;
+        _roomType    = roomType;
         _menu        = new MenuSelector(Options.Length);
 
         // Create enemy based on room type
@@ -95,7 +97,17 @@ public class BattleScreen : IGameScreen
         if (_battle.State == BattleTurnState.BattleWon)
         {
             _ctx.Depth.OnVictory();
-            _setScreen(new LootScreen(_ctx, _setScreen, afterLoot: _afterBattle));
+
+            // Map room type → loot context: elites and bosses get reroll-for-upgrade,
+            // bosses also get a depth-scaled chance at yellows. Anything else
+            // (a regular Battle room) takes the random-no-reroll path.
+            LootContext lootCtx = _roomType switch
+            {
+                RoomType.Elite => LootContext.Elite,
+                RoomType.Boss  => LootContext.Boss,
+                _              => LootContext.Battle,
+            };
+            _setScreen(new LootScreen(_ctx, _setScreen, afterLoot: _afterBattle, context: lootCtx));
         }
         else if (_battle.State == BattleTurnState.BattleLost)
         {

@@ -54,13 +54,16 @@ public class MapScreen : IGameScreen
     {
         if (_flashTimer > 0f) _flashTimer -= dt;
 
-        var kb = Keyboard.GetState();
+        var kb  = Keyboard.GetState();
+        var map = _ctx.CurrentMap;
 
-        // Cursor movement (constrained to map bounds)
-        if (WasPressed(kb, Keys.Up)    && _cursorY > 0)                               _cursorY--;
-        if (WasPressed(kb, Keys.Down)  && _cursorY < _ctx.CurrentMap.Height - 1)      _cursorY++;
-        if (WasPressed(kb, Keys.Left)  && _cursorX > 0)                               _cursorX--;
-        if (WasPressed(kb, Keys.Right) && _cursorX < _ctx.CurrentMap.Width  - 1)      _cursorX++;
+        // Cursor movement: bounded by the grid AND prevented from sliding onto
+        // Hidden rooms, since those aren't drawn — the cursor would appear to
+        // vanish into unexplored space.
+        if (WasPressed(kb, Keys.Up)    && _cursorY > 0              && map.GetRoom(_cursorX, _cursorY - 1).IsVisible) _cursorY--;
+        if (WasPressed(kb, Keys.Down)  && _cursorY < map.Height - 1 && map.GetRoom(_cursorX, _cursorY + 1).IsVisible) _cursorY++;
+        if (WasPressed(kb, Keys.Left)  && _cursorX > 0              && map.GetRoom(_cursorX - 1, _cursorY).IsVisible) _cursorX--;
+        if (WasPressed(kb, Keys.Right) && _cursorX < map.Width  - 1 && map.GetRoom(_cursorX + 1, _cursorY).IsVisible) _cursorX++;
 
         // Confirm — try to enter the room at cursor
         if (WasPressed(kb, Keys.Enter) || WasPressed(kb, Keys.Space))
@@ -162,7 +165,8 @@ public class MapScreen : IGameScreen
 
             case RoomType.Treasure:
                 _setScreen(new LootScreen(_ctx, _setScreen,
-                    afterLoot: () => new MapScreen(_ctx, _setScreen)));
+                    afterLoot: () => new MapScreen(_ctx, _setScreen),
+                    context:   LootContext.Treasure));
                 break;
 
             case RoomType.Rest:
