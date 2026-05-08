@@ -13,10 +13,11 @@ namespace DungeonCrawler.screens;
 
 public class BattleScreen : IGameScreen
 {
-    private readonly GameContext _ctx;
+    private readonly GameContext         _ctx;
     private readonly Action<IGameScreen> _setScreen;
-    private readonly BattleSystem _battle;
-    private readonly MenuSelector _menu;
+    private readonly BattleSystem        _battle;
+    private readonly MenuSelector        _menu;
+    private readonly Func<IGameScreen>?  _afterBattle;
 
     // Menu options: 3 battle actions + View Stats
     private enum MenuOption { Attack, Defend, Heal, Stats }
@@ -27,15 +28,31 @@ public class BattleScreen : IGameScreen
         MenuOption.Heal, MenuOption.Stats
     };
 
-    public BattleScreen(GameContext ctx, Action<IGameScreen> setScreen)
+    /// <summary>
+    /// <paramref name="roomType"/> controls which enemy variant is spawned
+    /// (Battle → normal, Elite → tougher, Boss → hardest).
+    /// <paramref name="afterBattle"/> is the screen factory called after the
+    /// player wins and picks loot.  Defaults to VictoryScreen if null.
+    /// </summary>
+    public BattleScreen(
+        GameContext         ctx,
+        Action<IGameScreen> setScreen,
+        RoomType            roomType    = RoomType.Battle,
+        Func<IGameScreen>?  afterBattle = null)
     {
-        _ctx = ctx;
-        _setScreen = setScreen;
-        _menu = new MenuSelector(Options.Length);
+        _ctx         = ctx;
+        _setScreen   = setScreen;
+        _afterBattle = afterBattle;
+        _menu        = new MenuSelector(Options.Length);
 
-        // Create enemy and position fighters
+        // Create enemy based on room type
         var res = Game1.Resources;
-        var enemy = EnemyFactory.Create(_ctx.Depth.CurrentDepth, res.EnemySprites, _ctx.Rng);
+        var enemy = roomType switch
+        {
+            RoomType.Elite => EnemyFactory.CreateElite(_ctx.Depth.CurrentDepth, res.EnemySprites, _ctx.Rng),
+            RoomType.Boss  => EnemyFactory.CreateBoss (_ctx.Depth.CurrentDepth, res.EnemySprites, _ctx.Rng),
+            _              => EnemyFactory.Create     (_ctx.Depth.CurrentDepth, res.EnemySprites, _ctx.Rng),
+        };
 
         _ctx.Player.Position = new Vector2(100, Game1.ScreenH - 250);
         _ctx.Player.Scale = 2.0f;
@@ -78,7 +95,7 @@ public class BattleScreen : IGameScreen
         if (_battle.State == BattleTurnState.BattleWon)
         {
             _ctx.Depth.OnVictory();
-            _setScreen(new LootScreen(_ctx, _setScreen));
+            _setScreen(new LootScreen(_ctx, _setScreen, afterLoot: _afterBattle));
         }
         else if (_battle.State == BattleTurnState.BattleLost)
         {

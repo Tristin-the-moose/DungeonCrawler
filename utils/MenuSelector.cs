@@ -36,11 +36,16 @@ public class MenuSelector
         var kb = Keyboard.GetState();
         Confirmed = false;
 
-        if (WasPressed(kb, _upKey))
-            Index = (Index - 1 + Count) % Count;
+        // Guard navigation when there are no items — avoids "% 0" crashes
+        // for screens that briefly initialise the selector with Count == 0.
+        if (Count > 0)
+        {
+            if (WasPressed(kb, _upKey))
+                Index = (Index - 1 + Count) % Count;
 
-        if (WasPressed(kb, _downKey))
-            Index = (Index + 1) % Count;
+            if (WasPressed(kb, _downKey))
+                Index = (Index + 1) % Count;
+        }
 
         if (WasPressed(kb, Keys.Enter) || WasPressed(kb, Keys.Space))
             Confirmed = true;
@@ -56,11 +61,14 @@ public class MenuSelector
         var kb = Keyboard.GetState();
         Confirmed = false;
 
-        if (WasPressed(kb, Keys.Left))
-            Index = (Index - 1 + Count) % Count;
+        if (Count > 0)
+        {
+            if (WasPressed(kb, Keys.Left))
+                Index = (Index - 1 + Count) % Count;
 
-        if (WasPressed(kb, Keys.Right))
-            Index = (Index + 1) % Count;
+            if (WasPressed(kb, Keys.Right))
+                Index = (Index + 1) % Count;
+        }
 
         if (WasPressed(kb, Keys.Enter) || WasPressed(kb, Keys.Space))
             Confirmed = true;

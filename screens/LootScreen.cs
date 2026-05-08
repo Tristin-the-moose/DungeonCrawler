@@ -14,21 +14,48 @@ namespace DungeonCrawler.screens;
 
 public class LootScreen : IGameScreen
 {
-    private readonly GameContext _ctx;
+    private readonly GameContext         _ctx;
     private readonly Action<IGameScreen> _setScreen;
-    private readonly MenuSelector _menu;
-    private readonly Equipment[] _lootChoices;
+    private readonly MenuSelector        _menu;
+    private readonly Equipment[]         _lootChoices;
+    private readonly Func<IGameScreen>?  _afterLoot;
 
-    public LootScreen(GameContext ctx, Action<IGameScreen> setScreen)
+    /// <summary>
+    /// <paramref name="afterLoot"/> is called once the player picks or skips loot.
+    /// Defaults to <see cref="VictoryScreen"/> when null (backwards-compatible).
+    /// </summary>
+    public LootScreen(
+        GameContext         ctx,
+        Action<IGameScreen> setScreen,
+        Func<IGameScreen>?  afterLoot = null)
     {
-        _ctx = ctx;
-        _setScreen = setScreen;
+        _ctx         = ctx;
+        _setScreen   = setScreen;
+        _afterLoot   = afterLoot;
         _lootChoices = LootFactory.GenerateChoices(ctx.Depth.CurrentDepth, ctx.Rng, ctx.Player.Equipment);
-        _menu = new MenuSelector(_lootChoices.Length);
+        // Guard MenuSelector against an empty loot list — Update will
+        // immediately bail to GoToVictory before any indexing happens.
+        _menu        = new MenuSelector(Math.Max(1, _lootChoices?.Length ?? 0));
     }
 
     public void Update(float dt)
     {
+        // Defensive: if loot generation produced nothing, don't sit on a dead
+        // screen — skip straight to whatever comes next.
+        if (_lootChoices == null || _lootChoices.Length == 0)
+        {
+            GoToVictory();
+            return;
+        }
+
+        // Check S *before* UpdateHorizontal so WasPressed compares against
+        // the previous frame's keyboard state, not the one about to be stored.
+        if (_menu.WasPressed(Keys.S))
+        {
+            GoToVictory();
+            return;
+        }
+
         _menu.UpdateHorizontal();
 
         if (_menu.Confirmed)
@@ -36,10 +63,6 @@ public class LootScreen : IGameScreen
             _ctx.Player.Equipment.Equip(_lootChoices[_menu.Index]);
             GoToVictory();
         }
-
-        // S to skip loot
-        if (_menu.WasPressed(Keys.S))
-            GoToVictory();
     }
 
     public void Draw(SpriteBatch sb)
@@ -108,6 +131,8 @@ public class LootScreen : IGameScreen
 
     private void GoToVictory()
     {
-        _setScreen(new VictoryScreen(_ctx, _setScreen));
+        // If a custom after-loot destination was provided (e.g. MapScreen), use it.
+        // Otherwise fall back to VictoryScreen for the classic flow.
+        _setScreen(_afterLoot?.Invoke() ?? new VictoryScreen(_ctx, _setScreen));
     }
 }

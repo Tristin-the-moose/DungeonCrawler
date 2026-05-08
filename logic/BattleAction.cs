@@ -64,9 +64,11 @@ public class BattleAction
             string critTag = isCrit ? " CRITICAL HIT!" : "";
             string attackMsg = $"{Source.Stats.Name} {verb} {Target.Stats.Name}!{critTag} (blocked)";
 
-            // Counter-attack (uses defender's speed for crit calc)
+            // Counter-attack (uses defender's speed for crit calc).
+            // The counter-attacker is `Target`; whether it's magic depends on the
+            // counter-attacker's weapon, not the original attacker's.
             int counterAtk = Target.UsesMagicAttack ? Target.EffectiveMagic : Target.EffectiveAttack;
-            int counterDef = Source.UsesMagicAttack ? Source.EffectiveProtection : Source.EffectiveDefense;
+            int counterDef = Target.UsesMagicAttack ? Source.EffectiveProtection : Source.EffectiveDefense;
             int counterRaw = Math.Max(cfg.MinDamage, counterAtk - counterDef);
             int counterDmg = Math.Max(cfg.MinDamage, (int)(counterRaw * cfg.DefendCounterMultiplier));
 
@@ -102,10 +104,10 @@ public class BattleAction
         if (!Source.CanHeal)
             return $"{Source.Stats.Name} tries to heal but it's not ready! ({Source.HealCooldown} turns)";
 
-        // Heal scales with max HP — starts at 50%, minimum 25%
-        float healPct = Math.Max(cfg.MinHealPercent_Combat, cfg.HealPercent);
-        int heal = cfg.HealBase + (int)(Source.Stats.MaxHp * healPct);
-        Source.Stats.Heal(heal);
+        // Heal a flat percentage of effective max HP (50% by default).
+        // Future heal-power boosts can be layered on top of this base value.
+        int heal = (int)(Source.EffectiveMaxHealth * cfg.HealPercent);
+        Source.Heal(heal);
 
         // Start cooldown
         Source.HealCooldown = cfg.HealCooldownTurns;

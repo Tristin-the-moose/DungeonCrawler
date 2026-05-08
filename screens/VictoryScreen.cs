@@ -17,10 +17,10 @@ public class VictoryScreen : IGameScreen
 
     private static readonly (string Label, Color Color)[] Options =
     {
-        ("Go Deeper",   Color.White),
-        ("View Stats",  Color.MediumPurple),
-        ("Save & Quit", Color.CornflowerBlue),
-        ("Cash Out",    Color.Gray)
+        ("Descend Deeper", Color.White),
+        ("View Stats",     Color.MediumPurple),
+        ("Save & Quit",    Color.CornflowerBlue),
+        ("Cash Out",       Color.Gray)
     };
 
     public VictoryScreen(GameContext ctx, Action<IGameScreen> setScreen)
@@ -37,9 +37,10 @@ public class VictoryScreen : IGameScreen
 
         switch (_menu.Index)
         {
-            case 0: // Go Deeper
+            case 0: // Descend Deeper — advance floor, generate new map, go to MapScreen
                 AdvanceAndSave();
-                _setScreen(new BattleScreen(_ctx, _setScreen));
+                _ctx.GenerateNewMap();
+                _setScreen(new MapScreen(_ctx, _setScreen));
                 break;
 
             case 1: // View Stats — passes 'this' so StatsScreen can return here
@@ -60,7 +61,7 @@ public class VictoryScreen : IGameScreen
 
     public void Draw(SpriteBatch sb)
     {
-        string msg = $"Victory!  Depth: {_ctx.Depth.CurrentDepth}  Score: {_ctx.Depth.Score}";
+        string msg = $"Floor {_ctx.Depth.CurrentDepth} Cleared!   Score: {_ctx.Depth.Score}";
         DrawHelpers.CenterText(sb, msg, 140, Color.Gold);
 
         string hp = $"HP: {_ctx.Player.Stats.Hp}/{_ctx.Player.Stats.MaxHp}";
@@ -78,7 +79,7 @@ public class VictoryScreen : IGameScreen
     private void AdvanceAndSave()
     {
         _ctx.Depth.GoDeeper();
-        _ctx.Depth.RestBetweenFloors(_ctx.Player.Stats);
+        _ctx.Depth.RestBetweenFloors(_ctx.Player);
         SaveSystem.Save(_ctx.Player, _ctx.Depth);
     }
 }

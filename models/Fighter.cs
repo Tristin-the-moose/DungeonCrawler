@@ -39,6 +39,16 @@ public class Fighter
         IsDefending = false;
     }
 
+    /// <summary>
+    /// Restore HP, clamped to the fighter's effective max (base + gear bonuses).
+    /// All heal callers should use this — Stats has no Heal of its own because
+    /// it has no knowledge of equipment HP bonuses.
+    /// </summary>
+    public void Heal(int amount)
+    {
+        Stats.Hp = System.Math.Min(EffectiveMaxHealth, Stats.Hp + amount);
+    }
+
     /// <summary>Tick cooldowns at the start of each turn.</summary>
     public void TickCooldowns()
     {

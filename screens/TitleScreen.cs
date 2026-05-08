@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using DungeonCrawler.logic;
+using DungeonCrawler.models;
 using DungeonCrawler.utils;
 
 namespace DungeonCrawler.screens;
@@ -65,8 +66,8 @@ public class TitleScreen : IGameScreen
     private void StartNewGame()
     {
         SaveSystem.Delete();
-        _ctx.Reset();
-        StartBattle();
+        _ctx.Reset();          // also calls GenerateNewMap()
+        _setScreen(new MapScreen(_ctx, _setScreen));
     }
 
     private void ContinueGame()
@@ -75,23 +76,36 @@ public class TitleScreen : IGameScreen
         if (save != null)
         {
             _ctx.Player = FighterFactory.FromSave(save, Game1.Resources.PlayerSprite);
-            _ctx.Depth = new DepthManager
+            _ctx.Depth  = new DepthManager
             {
                 CurrentDepth = save.CurrentDepth,
-                TotalKills = save.TotalKills,
-                Score = save.Score
+                TotalKills   = save.TotalKills,
+                Score        = save.Score
             };
+
+            // Restore the saved map if present, otherwise generate a fresh one
+            if (save.MapRooms != null && save.MapRooms.Length > 0)
+            {
+                var rooms = new Room[save.MapWidth, save.MapHeight];
+                foreach (var r in save.MapRooms)
+                    rooms[r.X, r.Y] = new Room(r.X, r.Y, r.Type) { State = r.State };
+                _ctx.CurrentMap = DungeonMap.FromSave(rooms, save.MapPlayerX, save.MapPlayerY);
+            }
+            else
+            {
+                _ctx.GenerateNewMap();
+            }
         }
-        StartBattle();
+        else
+        {
+            _ctx.GenerateNewMap();
+        }
+
+        _setScreen(new MapScreen(_ctx, _setScreen));
     }
 
     private void OpenSettings()
     {
         _setScreen(new ConfigScreen(_setScreen, new TitleScreen(_ctx, _setScreen)));
-    }
-
-    private void StartBattle()
-    {
-        _setScreen(new BattleScreen(_ctx, _setScreen));
     }
 }

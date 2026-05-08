@@ -10,16 +10,23 @@ namespace DungeonCrawler;
 /// </summary>
 public class GameContext
 {
-    public Fighter Player { get; set; }
-    public DepthManager Depth { get; set; }
-    public Random Rng { get; set; }
+    public Fighter     Player     { get; set; }
+    public DepthManager Depth     { get; set; }
+    public Random      Rng        { get; set; }
+    public DungeonMap  CurrentMap { get; set; }
 
-    /// <summary>
-    /// Resets the context for a new game.
-    /// </summary>
+    /// <summary>Generate (or regenerate) the map for the current depth.</summary>
+    public void GenerateNewMap()
+    {
+        var cfg    = GameConfig.Instance;
+        CurrentMap = MapGenerator.Generate(cfg.MapWidth, cfg.MapHeight, Depth.CurrentDepth, Rng);
+    }
+
+    /// <summary>Resets the context for a new game and generates the first map.</summary>
     public void Reset()
     {
-        Depth = new DepthManager();
+        Depth  = new DepthManager();
         Player = FighterFactory.CreatePlayer(Game1.Resources.PlayerSprite);
+        GenerateNewMap();
     }
 }

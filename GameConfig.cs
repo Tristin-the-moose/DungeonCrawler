@@ -82,6 +82,23 @@ public class GameConfig
     public int AttackBoostPerFloor { get; set; } = 0;          // removed flat ATK — gear handles it now
 
     // ════════════════════════════════════════════
+    //  MAP
+    // ════════════════════════════════════════════
+    public int   MapWidth  { get; set; } = 5;   // grid columns per floor
+    public int   MapHeight { get; set; } = 4;   // grid rows    per floor
+
+    // Rest room
+    public float RestHealPercent { get; set; } = 0.75f;  // % of effective max HP restored
+
+    // Elite enemy multipliers (applied on top of normal scaling)
+    public float EliteHpMultiplier     { get; set; } = 1.6f;
+    public float EliteAttackMultiplier { get; set; } = 1.4f;
+
+    // Boss enemy multipliers
+    public float BossHpMultiplier     { get; set; } = 2.5f;
+    public float BossAttackMultiplier { get; set; } = 2.0f;
+
+    // ════════════════════════════════════════════
     //  LOOT
     // ════════════════════════════════════════════
     public int LootChoiceCount { get; set; } = 3;

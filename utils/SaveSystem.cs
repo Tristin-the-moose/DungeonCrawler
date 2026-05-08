@@ -2,12 +2,22 @@
 // FILE: utils/SaveSystem.cs — JSON-based save/load
 // ============================================================
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using DungeonCrawler.models;
 using DungeonCrawler.logic;
 
 namespace DungeonCrawler.utils;
+
+/// <summary>Serializable state of a single map room.</summary>
+public class RoomSaveData
+{
+    public int       X     { get; set; }
+    public int       Y     { get; set; }
+    public RoomType  Type  { get; set; }
+    public RoomState State { get; set; }
+}
 
 /// <summary>
 /// Serializable snapshot of everything needed to resume a run.
@@ -36,17 +46,25 @@ public class SaveData
     public Equipment Necklace { get; set; }
     public Equipment Weapon { get; set; }
 
+    // Map state (null when saved between floors — a fresh map will be generated)
+    public int            MapWidth   { get; set; }
+    public int            MapHeight  { get; set; }
+    public int            MapPlayerX { get; set; }
+    public int            MapPlayerY { get; set; }
+    public RoomSaveData[] MapRooms   { get; set; }
+
     public DateTime SavedAt { get; set; }
 
     /// <summary>
     /// Build SaveData from live game objects.
-    /// Single source of truth for the mapping — adding a new stat
-    /// only requires updating this one method + the properties above.
+    /// Pass <paramref name="map"/> to persist the current floor layout;
+    /// omit it (or pass null) when saving between floors so a fresh map
+    /// is generated on the next continue.
     /// </summary>
-    public static SaveData FromGame(Fighter player, DepthManager depth)
+    public static SaveData FromGame(Fighter player, DepthManager depth, DungeonMap? map = null)
     {
         var gear = player.Equipment;
-        return new SaveData
+        var data = new SaveData
         {
             CurrentDepth = depth.CurrentDepth,
             TotalKills   = depth.TotalKills,
@@ -67,6 +85,25 @@ public class SaveData
             Weapon       = gear?.Weapon,
             SavedAt      = DateTime.Now
         };
+
+        if (map != null)
+        {
+            data.MapWidth   = map.Width;
+            data.MapHeight  = map.Height;
+            data.MapPlayerX = map.PlayerX;
+            data.MapPlayerY = map.PlayerY;
+
+            var rooms = new List<RoomSaveData>(map.Width * map.Height);
+            for (int x = 0; x < map.Width; x++)
+                for (int y = 0; y < map.Height; y++)
+                {
+                    var r = map.GetRoom(x, y);
+                    rooms.Add(new RoomSaveData { X = x, Y = y, Type = r.Type, State = r.State });
+                }
+            data.MapRooms = rooms.ToArray();
+        }
+
+        return data;
     }
 }
 
@@ -86,13 +123,16 @@ public static class SaveSystem
         WriteIndented = true
     };
 
-    /// <summary>Save current run to disk.</summary>
-    public static void Save(Fighter player, DepthManager depth)
+    /// <summary>
+    /// Save current run to disk.
+    /// Pass <paramref name="map"/> to include the current floor layout in the save.
+    /// </summary>
+    public static void Save(Fighter player, DepthManager depth, DungeonMap? map = null)
     {
         try
         {
             Directory.CreateDirectory(SaveDir);
-            var data = SaveData.FromGame(player, depth);
+            var data = SaveData.FromGame(player, depth, map);
             string json = JsonSerializer.Serialize(data, JsonOpts);
             File.WriteAllText(SavePath, json);
             GameLogger.Info($"Game saved (Depth {depth.CurrentDepth})");

@@ -38,14 +38,18 @@ public static class DrawHelpers
     {
         DrawRect(sb, x, y, w, h, Color.DarkGray);
 
-        int fill = (int)(w * f.Stats.HpPercent);
-        Color barColor = f.Stats.HpPercent > 0.5f  ? Color.LimeGreen
-                       : f.Stats.HpPercent > 0.25f ? Color.Yellow
+        // Use effective max so the bar agrees with the map-screen HP readout
+        // and reflects equipment HealthBonus.
+        int maxHp = f.EffectiveMaxHealth;
+        float pct = maxHp > 0 ? (float)f.Stats.Hp / maxHp : 0f;
+        int fill = (int)(w * pct);
+        Color barColor = pct > 0.5f  ? Color.LimeGreen
+                       : pct > 0.25f ? Color.Yellow
                        : Color.Red;
 
         DrawRect(sb, x, y, fill, h, barColor);
 
-        string label = $"{f.Stats.Name} {f.Stats.Hp}/{f.Stats.MaxHp}";
+        string label = $"{f.Stats.Name} {f.Stats.Hp}/{maxHp}";
         sb.DrawString(Game1.Resources.Font, label,
             new Vector2(x + 4, y + 1), Color.Black);
     }

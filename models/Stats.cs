@@ -23,8 +23,6 @@ public class Stats
         Hp = Math.Max(0, Hp - amount);
     }
 
-    public void Heal(int amount)
-    {
-        Hp = Math.Min(MaxHp, Hp + amount);
-    }
+    // Heal lives on Fighter — it needs effective max HP (base + gear),
+    // which Stats can't see. See Fighter.Heal.
 }

@@ -21,7 +21,7 @@ public class DepthManager
 
     public void GoDeeper() => CurrentDepth++;
 
-    public void RestBetweenFloors(Stats playerStats)
+    public void RestBetweenFloors(Fighter player)
     {
         var cfg = GameConfig.Instance;
 
@@ -30,11 +30,11 @@ public class DepthManager
         float healPct = cfg.HealPercentBetweenFloors - (CurrentDepth * cfg.HealDecayPerFloor);
         healPct = MathF.Max(healPct, cfg.MinHealPercent);
 
-        int heal = (int)(playerStats.MaxHp * healPct);
-        playerStats.Heal(heal);
+        int heal = (int)(player.EffectiveMaxHealth * healPct);
+        player.Heal(heal);
 
         // Small flat bonuses (reduced from original — gear is the main power source now)
-        playerStats.MaxHp += cfg.MaxHpBoostPerFloor;
-        playerStats.Attack += cfg.AttackBoostPerFloor;
+        player.Stats.MaxHp += cfg.MaxHpBoostPerFloor;
+        player.Stats.Attack += cfg.AttackBoostPerFloor;
     }
 }
